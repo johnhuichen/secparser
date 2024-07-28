@@ -5,7 +5,10 @@
 .git
 
 # temp folder
-tmp
+tmp/
 
-# local config
-config.local.toml
+# config
+config/*.local.*
+
+# log
+log

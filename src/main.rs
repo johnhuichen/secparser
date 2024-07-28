@@ -1,13 +1,15 @@
 use std::error::Error;
 
-use self::downloader::Downloader;
-
 mod downloader;
+mod logger;
+mod prompt;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    logger::init()?;
     let url = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
-    let result = Downloader::download(url)?;
-    println!("Hello, world!");
+    let result = downloader::download(url).await?;
+    println!("{:#?}", result);
 
     Ok(())
 }
