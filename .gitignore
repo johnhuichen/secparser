@@ -1,0 +1,11 @@
+# build
+/target
+
+# git
+.git
+
+# temp folder
+tmp
+
+# local config
+# config.local.toml

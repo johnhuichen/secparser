@@ -1,0 +1,13 @@
+[package]
+name = "secparser"
+version = "0.0.0"
+edition = "2021"
+description = "SEC Parser"
+repository = "https://github.com/johnhuichen/secparser"
+keywords = ["SEC"]
+categories = ["finance", "command-line-utilities"]
+license = "Apache-2.0"
+
+[dependencies]
+serde = "1.0.204"
+toml = "0.8.16"
