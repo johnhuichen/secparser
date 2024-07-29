@@ -8,7 +8,10 @@
 tmp/
 
 # config
-config/.*
+config/local.toml
 
 # log
 log
+
+# output including parsed data
+out
