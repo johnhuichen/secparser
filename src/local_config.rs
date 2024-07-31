@@ -35,9 +35,9 @@ impl LocalConfig {
     fn create_file_if_missing() {
         if !Path::new(Self::FILE_PATH).exists() {
             File::create_new(Self::FILE_PATH)
-                .unwrap_or_else(|_| panic!("Should create new file {}", Self::FILE_PATH));
+                .unwrap_or_else(|e| panic!("Should create new file {}: {e}", Self::FILE_PATH));
             let cfg: Self = toml::from_str("")
-                .unwrap_or_else(|_| panic!("Should parse config {}", Self::FILE_PATH));
+                .unwrap_or_else(|e| panic!("Should parse config {}, {e}", Self::FILE_PATH));
             Self::save_to_file(&cfg);
             log::warn!(
                 "{}",
@@ -49,10 +49,10 @@ impl LocalConfig {
 
     fn parse_cfg_from_toml() -> Self {
         let contents = fs::read_to_string(Self::FILE_PATH)
-            .unwrap_or_else(|_| panic!("Should open config {}", Self::FILE_PATH));
+            .unwrap_or_else(|e| panic!("Should open config {}: {e}", Self::FILE_PATH));
 
         toml::from_str(&contents)
-            .unwrap_or_else(|_| panic!("Should parse config {}", Self::FILE_PATH))
+            .unwrap_or_else(|e| panic!("Should parse config {}: {e}", Self::FILE_PATH))
     }
 
     pub fn new() -> Self {
@@ -80,7 +80,7 @@ impl LocalConfig {
                 ],
             )
             .prompt()
-            .unwrap_or_else(|_| panic!("Should get a valid option"));
+            .unwrap_or_else(|e| panic!("Should get a valid option: {e}"));
 
             if ans == update_user_agent {
                 self.update_user_agent();
@@ -115,7 +115,7 @@ impl LocalConfig {
             .with_validator(validator)
             .with_help_message("see https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data for details")
             .prompt()
-            .unwrap_or_else(|_| panic!("Should get valid user agent"));
+            .unwrap_or_else(|e| panic!("Should get valid user agent: {e}"));
 
         if !user_agent.is_empty() {
             self.user_agent = user_agent;
@@ -128,7 +128,7 @@ impl LocalConfig {
         let temp_dir = Text::new("What is the new temp directory?")
             .with_help_message("Temp directory is where downloaded files are stored")
             .prompt()
-            .unwrap_or_else(|_| panic!("Should get valid temp directory"));
+            .unwrap_or_else(|e| panic!("Should get valid temp directory: {e}"));
 
         if !temp_dir.is_empty() {
             self.temp_dir = temp_dir;
@@ -141,7 +141,7 @@ impl LocalConfig {
         let out_dir = Text::new("What is the new data output directory?")
             .with_help_message("Out directory is where parsed files are stored")
             .prompt()
-            .unwrap_or_else(|_| panic!("Should get valid out directory"));
+            .unwrap_or_else(|e| panic!("Should get valid out directory: {e}"));
 
         if !out_dir.is_empty() {
             self.out_dir = out_dir;
@@ -153,8 +153,9 @@ impl LocalConfig {
     fn save_to_file(&self) {
         let cfg_content = toml::to_string(self).unwrap();
 
-        let mut file = File::create(Self::FILE_PATH).unwrap_or_else(|_| panic!());
+        let mut file = File::create(Self::FILE_PATH)
+            .unwrap_or_else(|e| panic!("Should create {}: {e}", Self::FILE_PATH));
         file.write_all(cfg_content.as_bytes())
-            .unwrap_or_else(|_| panic!("Should write default config to empty config file"));
+            .unwrap_or_else(|e| panic!("Should write default config to {}: {e}", Self::FILE_PATH));
     }
 }

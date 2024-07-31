@@ -1,17 +1,17 @@
 use colored::Colorize;
 use inquire::Select;
-use std::error::Error;
 
 use self::local_config::LocalConfig;
 
+mod csv_writer;
 mod downloader;
 mod local_config;
 mod logger;
 mod parse_cik;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    logger::init()?;
+async fn main() {
+    logger::init();
 
     let config_opt = "- View and edit local configuration";
     let cik_opt = "- Download and parse CIK list";
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ];
         let ans = Select::new("Choose one of the options", options)
             .prompt()
-            .unwrap_or_else(|_| panic!("Should get a valid option"));
+            .unwrap_or_else(|e| panic!("Should get a valid option: {e}"));
 
         if ans == config_opt {
             local_config.config_menu();
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if ans == cik_opt {
-            parse_cik::download_and_parse().await?;
+            parse_cik::download_and_parse().await;
             continue;
         }
 
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         if ans == exit_opt {
             log::info!("Good bye");
-            return Ok(());
+            return;
         }
     }
 }
