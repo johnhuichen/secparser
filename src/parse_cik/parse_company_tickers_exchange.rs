@@ -89,9 +89,8 @@ impl Iterator for CompanyTickersExchangeRecords {
     }
 }
 
-pub async fn parse(downloader: &mut Downloader) {
+pub async fn parse(downloader: &mut Downloader, local_config: &LocalConfig) {
     log::info!("Downloading company tickers exchange data");
-    let local_config = LocalConfig::new();
     let url = "https://www.sec.gov/files/company_tickers_exchange.json";
     let filepath = downloader.download(url).await;
 

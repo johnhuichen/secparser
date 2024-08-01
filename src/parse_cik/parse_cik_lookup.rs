@@ -73,9 +73,8 @@ impl CsvRecords for CikLookupRecords {
     }
 }
 
-pub async fn parse(downloader: &mut Downloader) {
+pub async fn parse(downloader: &mut Downloader, local_config: &LocalConfig) {
     log::info!("Downloading cik lookup data");
-    let local_config = LocalConfig::new();
     let url = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
     let filepath = downloader.download(url).await;
 
