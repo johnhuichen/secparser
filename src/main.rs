@@ -14,7 +14,7 @@ async fn main() {
     logger::init();
 
     let config_opt = "- View and edit local configuration";
-    let cik_opt = "- Download and parse CIK list";
+    let cik_opt = "- Download and parse CIK lookup";
     let financial_statement_opt = "- Download and parse Financial Statements";
     let form13f_opt = "- Download and parse Form 13F";
     let exit_opt = "- Exit";
@@ -38,7 +38,7 @@ async fn main() {
         }
 
         if ans == cik_opt {
-            parse_cik::download_and_parse().await;
+            parse_cik::parse().await;
             continue;
         }
 

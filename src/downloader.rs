@@ -65,20 +65,21 @@ impl Downloader {
             return ans;
         }
 
-        let msg = format!(
-            "A file with the same name already exists({}), do you want to download it again?",
-            filepath.to_string_lossy().bright_blue()
-        );
+        let msg = format!("{filepath:?} already exists, do you want to download it again?");
+        let msg = format!("{}", msg.bright_yellow());
         let ans = Confirm::new(&msg)
             .with_default(false)
-            .with_help_message("Download again may fetch new content")
+            .with_help_message("Default to skip download")
             .prompt()
             .unwrap();
 
         if ans {
-            log::info!("Will redownload all existing files");
+            log::info!("{}", "Will redownload all existing files".bright_yellow());
         } else {
-            log::info!("Will skip download for all existings files");
+            log::info!(
+                "{}",
+                "Will skip download for all existings files".bright_purple()
+            );
         }
 
         self.preferences.redownload = Some(ans);
