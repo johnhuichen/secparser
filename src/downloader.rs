@@ -9,7 +9,7 @@ use reqwest::{
 use std::fs::{self, File};
 use std::io::copy;
 use std::path::{Path, PathBuf};
-use std::{error::Error, thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration};
 
 use crate::local_config::LocalConfig;
 
@@ -34,20 +34,20 @@ impl Downloader {
         }
     }
 
-    pub async fn download(&mut self, url: &str) -> Result<PathBuf, Box<dyn Error>> {
+    pub async fn download(&mut self, url: &str) -> PathBuf {
         let filepath = self.get_filepath(url);
 
         if self.should_download(&filepath) {
-            self.save_file(url, &filepath).await?;
+            self.save_file(url, &filepath).await;
         }
 
-        Ok(filepath)
+        filepath
     }
 
     fn get_filepath(&self, url: &str) -> PathBuf {
         fs::create_dir_all(&self.temp_dir)
-            .unwrap_or_else(|_| panic!("Should create directory: {}", self.temp_dir));
-        let parsed_url = Url::parse(url).unwrap_or_else(|_| panic!("Should parse url: {url}"));
+            .unwrap_or_else(|e| panic!("Should create directory {}: {e}", self.temp_dir));
+        let parsed_url = Url::parse(url).unwrap_or_else(|e| panic!("Should parse url {url}: {e}"));
         let filename = parsed_url
             .path_segments()
             .and_then(|segments| segments.last())
@@ -86,7 +86,7 @@ impl Downloader {
         ans
     }
 
-    async fn save_file(&self, url: &str, filepath: &PathBuf) -> Result<(), Box<dyn Error>> {
+    async fn save_file(&self, url: &str, filepath: &PathBuf) {
         let client = reqwest::Client::new();
         // SEC allows max concurrent request of 10 requests/second.
         // This is the easiest way to ensure this restriction is followed
@@ -101,12 +101,15 @@ impl Downloader {
             .header(ACCEPT_ENCODING, "gzip,deflate".to_string())
             .header(HOST, "www.sec.gov".to_string())
             .send()
-            .await?;
+            .await
+            .unwrap_or_else(|e| panic!("Should download {url}: {e}"));
         let mut dest =
-            File::create(filepath).unwrap_or_else(|_| panic!("Should create {filepath:?}"));
-        let content = response.text().await?;
+            File::create(filepath).unwrap_or_else(|e| panic!("Should create {filepath:?}: {e}"));
+        let content = response
+            .text()
+            .await
+            .unwrap_or_else(|e| panic!("Should parse response from {url}: {e}"));
         copy(&mut content.as_bytes(), &mut dest)
-            .unwrap_or_else(|_| panic!("Should copy download content to file"));
-        Ok(())
+            .unwrap_or_else(|e| panic!("Should copy download content to file: {e}"));
     }
 }
