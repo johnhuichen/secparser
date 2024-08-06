@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Lines};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +18,9 @@ pub struct CikLookup {
 }
 
 pub struct CikLookupRecords {
-    iter: FileLines,
+    pub count: usize,
+
+    lines: FileLines,
     tickers_exchange: HashMap<usize, (Option<String>, Option<String>)>,
 }
 
@@ -31,16 +34,14 @@ struct TickersExchangeData {
 }
 
 impl CikLookupRecords {
-    pub async fn new(user_agent: &str) -> Self {
-        let mut downloader = Downloader::new(user_agent);
+    pub async fn new(user_agent: &str, download_dir: &str) -> Self {
+        let mut downloader = Downloader::new(user_agent, download_dir);
         let url = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
         let filepath = downloader.download(url).await;
 
-        let file =
-            File::open(&filepath).unwrap_or_else(|e| panic!("Should open {filepath:?}: {e}"));
-        let reader = BufReader::new(file);
-
-        let lines = reader.lines();
+        let lines = Self::get_lines(&filepath);
+        let count = lines.count();
+        let lines = Self::get_lines(&filepath);
 
         let url = "https://www.sec.gov/files/company_tickers_exchange.json";
         let filepath = downloader.download(url).await;
@@ -51,6 +52,11 @@ impl CikLookupRecords {
         let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)
             .unwrap_or_else(|e| panic!("Should parse {filepath:?}: {e}"));
 
+        assert_eq!(
+            tickers_exchange.fields,
+            vec!("cik", "name", "ticker", "exchange")
+        );
+
         let tickers_exchange = tickers_exchange
             .data
             .into_iter()
@@ -58,9 +64,17 @@ impl CikLookupRecords {
             .collect::<HashMap<_, _>>();
 
         Self {
-            iter: lines,
+            count,
+            lines,
             tickers_exchange,
         }
+    }
+
+    fn get_lines(filepath: &PathBuf) -> FileLines {
+        let file = File::open(filepath).unwrap_or_else(|e| panic!("Should open {filepath:?}: {e}"));
+        let reader = BufReader::new(file);
+
+        reader.lines()
     }
 }
 
@@ -68,7 +82,7 @@ impl Iterator for CikLookupRecords {
     type Item = CikLookup;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
+        match self.lines.next() {
             Some(line) => {
                 let line = line.unwrap_or_else(|e| panic!("Should get line in cik lookup: {e}"));
                 let line = &line[..line.len() - 1];
@@ -97,6 +111,28 @@ impl Iterator for CikLookupRecords {
                 })
             }
             None => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn it_works() {
+        let records = CikLookupRecords::new("example@secparser.com", "/tmp/secparser").await;
+
+        assert_eq!(records.count, 954999);
+
+        for r in records {
+            if !r.ticker.is_empty() {
+                assert_eq!(r.cik, 1084869);
+                assert_eq!(r.name, "1 800 FLOWERS COM INC");
+                assert_eq!(r.ticker, "FLWS");
+                assert_eq!(r.exchange, "Nasdaq");
+                break;
+            }
         }
     }
 }
