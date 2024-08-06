@@ -1,5 +1,7 @@
-[package]
-name = "secparser"
+[workspace]
+members = ["secparser", "secparser_examples"]
+
+[workspace.package]
 version = "0.0.0"
 edition = "2021"
 description = "SEC Parser"
@@ -8,15 +10,5 @@ keywords = ["SEC"]
 categories = ["finance", "command-line-utilities"]
 license = "Apache-2.0"
 
-[dependencies]
-colored = "2.1.0"
-csv = "1.3.0"
-indicatif = "0.17.8"
-inquire = "0.7.5"
-log = "0.4.22"
-log4rs = { version = "1.3.0", features = ["gzip"] }
-reqwest = {version = "0.12.5", features = ["gzip", "deflate"]}
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.121"
-tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
-toml = "0.8.16"
+[workspace.dependencies]
+secparser = { path = "./secparser" }

@@ -1,0 +1,13 @@
+[package]
+name = "secparser_examples"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+
+[dependencies]
+secparser = { workspace = true }
+tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
