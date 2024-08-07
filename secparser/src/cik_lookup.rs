@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::downloader::Downloader;
+use crate::downloader::{DownloadConfig, Downloader};
 
 type FileLines = Lines<BufReader<File>>;
 
@@ -34,8 +34,8 @@ struct TickersExchangeData {
 }
 
 impl CikLookupRecords {
-    pub async fn new(user_agent: &str, download_dir: &str) -> Self {
-        let mut downloader = Downloader::new(user_agent, download_dir);
+    pub async fn get(download_config: DownloadConfig) -> Self {
+        let mut downloader = Downloader::new(download_config);
         let url = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
         let filepath = downloader.download(url).await;
 
@@ -47,7 +47,7 @@ impl CikLookupRecords {
         let filepath = downloader.download(url).await;
 
         let contents = fs::read_to_string(&filepath)
-            .unwrap_or_else(|e| panic!("Should open {filepath:?}: {e}"));
+            .unwrap_or_else(|e| panic!("Should read {filepath:?}: {e}"));
 
         let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)
             .unwrap_or_else(|e| panic!("Should parse {filepath:?}: {e}"));
@@ -117,11 +117,18 @@ impl Iterator for CikLookupRecords {
 
 #[cfg(test)]
 mod tests {
+    use crate::downloader::DownloadConfigBuilder;
+
     use super::*;
 
     #[tokio::test]
     async fn it_works() {
-        let records = CikLookupRecords::new("example@secparser.com", "/tmp/secparser").await;
+        let user_agent = "example@secparser.com".to_string();
+        let download_config = DownloadConfigBuilder::default()
+            .user_agent(user_agent)
+            .build()
+            .unwrap_or_else(|e| panic!("Should build download config: {e}"));
+        let records = CikLookupRecords::get(download_config).await;
 
         assert_eq!(records.count, 954999);
 
