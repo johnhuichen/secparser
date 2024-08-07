@@ -1,13 +1,12 @@
+use anyhow::Result;
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Lines};
-use std::path::PathBuf;
+use std::fs::{self};
 
 use serde::{Deserialize, Serialize};
 
-use crate::downloader::{DownloadConfig, Downloader};
+use crate::traits::{FileLines, FileReader};
 
-type FileLines = Lines<BufReader<File>>;
+use super::files::CikLookupFiles;
 
 #[derive(Debug)]
 pub struct CikLookup {
@@ -15,13 +14,6 @@ pub struct CikLookup {
     pub name: String,
     pub ticker: String,
     pub exchange: String,
-}
-
-pub struct CikLookupRecords {
-    pub count: usize,
-
-    lines: FileLines,
-    tickers_exchange: HashMap<usize, (Option<String>, Option<String>)>,
 }
 
 type TickersExchangeFields = Vec<String>;
@@ -33,24 +25,23 @@ struct TickersExchangeData {
     data: Vec<TickersExchangeDataItem>,
 }
 
+pub struct CikLookupRecords {
+    pub count: usize,
+
+    lines: FileLines,
+    tickers_exchange: HashMap<usize, (Option<String>, Option<String>)>,
+}
+
+impl FileReader for CikLookupRecords {}
+
 impl CikLookupRecords {
-    pub async fn get(download_config: DownloadConfig) -> Self {
-        let mut downloader = Downloader::new(download_config);
-        let url = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
-        let filepath = downloader.download(url).await;
+    pub fn new(files: CikLookupFiles) -> Result<Self> {
+        let count = Self::get_lines_count(&files.lookup_filepath)?;
+        let lines = Self::get_lines(&files.lookup_filepath)?;
 
-        let lines = Self::get_lines(&filepath);
-        let count = lines.count();
-        let lines = Self::get_lines(&filepath);
+        let contents = fs::read_to_string(&files.tickers_exchange_filepath)?;
 
-        let url = "https://www.sec.gov/files/company_tickers_exchange.json";
-        let filepath = downloader.download(url).await;
-
-        let contents = fs::read_to_string(&filepath)
-            .unwrap_or_else(|e| panic!("Should read {filepath:?}: {e}"));
-
-        let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)
-            .unwrap_or_else(|e| panic!("Should parse {filepath:?}: {e}"));
+        let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)?;
 
         assert_eq!(
             tickers_exchange.fields,
@@ -63,18 +54,11 @@ impl CikLookupRecords {
             .map(|item| (item.0, (item.2, item.3)))
             .collect::<HashMap<_, _>>();
 
-        Self {
+        Ok(Self {
             count,
             lines,
             tickers_exchange,
-        }
-    }
-
-    fn get_lines(filepath: &PathBuf) -> FileLines {
-        let file = File::open(filepath).unwrap_or_else(|e| panic!("Should open {filepath:?}: {e}"));
-        let reader = BufReader::new(file);
-
-        reader.lines()
+        })
     }
 }
 
@@ -102,7 +86,7 @@ impl Iterator for CikLookupRecords {
                         None => "".to_string(),
                     };
 
-                    CikLookup {
+                    Self::Item {
                         cik,
                         name: name.to_string(),
                         ticker,
@@ -118,19 +102,18 @@ impl Iterator for CikLookupRecords {
 #[cfg(test)]
 mod tests {
     use crate::downloader::DownloadConfigBuilder;
+    use anyhow::Result;
 
     use super::*;
 
     #[tokio::test]
-    async fn it_works() {
+    async fn it_works() -> Result<()> {
         let user_agent = "example@secparser.com".to_string();
         let download_config = DownloadConfigBuilder::default()
             .user_agent(user_agent)
-            .build()
-            .unwrap_or_else(|e| panic!("Should build download config: {e}"));
-        let records = CikLookupRecords::get(download_config).await;
-
-        assert_eq!(records.count, 954999);
+            .build()?;
+        let files = CikLookupFiles::download(download_config).await?;
+        let records = CikLookupRecords::new(files)?;
 
         for r in records {
             if !r.ticker.is_empty() {
@@ -141,5 +124,29 @@ mod tests {
                 break;
             }
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn it_parses_cached_files() -> Result<()> {
+        let user_agent = "example@secparser.com".to_string();
+        let download_config = DownloadConfigBuilder::default()
+            .user_agent(user_agent)
+            .build()?;
+        let files = CikLookupFiles::get_local_cache(download_config)?;
+        let records = CikLookupRecords::new(files)?;
+
+        for r in records {
+            if !r.ticker.is_empty() {
+                assert_eq!(r.cik, 1084869);
+                assert_eq!(r.name, "1 800 FLOWERS COM INC");
+                assert_eq!(r.ticker, "FLWS");
+                assert_eq!(r.exchange, "Nasdaq");
+                break;
+            }
+        }
+
+        Ok(())
     }
 }
