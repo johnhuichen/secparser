@@ -9,5 +9,6 @@ categories.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 secparser = { workspace = true }
 tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }

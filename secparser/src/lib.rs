@@ -1,2 +1,3 @@
 pub mod cik_lookup;
-mod downloader;
+pub mod downloader;
+pub mod financial_statements;

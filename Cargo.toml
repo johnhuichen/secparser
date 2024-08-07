@@ -1,5 +1,6 @@
 [workspace]
 members = ["secparser", "secparser_examples"]
+resolver = "2"
 
 [workspace.package]
 version = "0.0.0"
@@ -11,4 +12,6 @@ categories = ["finance", "command-line-utilities"]
 license = "Apache-2.0"
 
 [workspace.dependencies]
+anyhow = "1.0.86"
+derive_builder = "0.20.0"
 secparser = { path = "./secparser" }

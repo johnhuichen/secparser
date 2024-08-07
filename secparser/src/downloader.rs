@@ -1,4 +1,5 @@
 use core::panic;
+use derive_builder::Builder;
 use reqwest::{
     self,
     header::{ACCEPT_ENCODING, HOST, USER_AGENT},
@@ -8,23 +9,30 @@ use std::fs::{self, File};
 use std::io::copy;
 use std::path::{Path, PathBuf};
 
+#[derive(Clone, Debug, Builder)]
+pub struct DownloadConfig {
+    pub user_agent: String,
+
+    #[builder(default = "String::from(\"/tmp/secparser\")")]
+    pub download_dir: String,
+
+    #[builder(default = "false")]
+    pub use_local_cache: bool,
+}
+
 pub struct Downloader {
-    user_agent: String,
-    download_dir: String,
+    config: DownloadConfig,
 }
 
 impl Downloader {
-    pub fn new(user_agent: &str, download_dir: &str) -> Self {
-        Downloader {
-            user_agent: user_agent.to_owned(),
-            download_dir: download_dir.to_owned(),
-        }
+    pub fn new(config: DownloadConfig) -> Self {
+        Downloader { config }
     }
 
     pub async fn download(&mut self, url: &str) -> PathBuf {
         let filepath = self.get_filepath(url);
 
-        if !filepath.exists() {
+        if !self.config.use_local_cache || !filepath.exists() {
             self.save_file(url, &filepath).await;
         }
 
@@ -32,15 +40,15 @@ impl Downloader {
     }
 
     fn get_filepath(&self, url: &str) -> PathBuf {
-        fs::create_dir_all(&self.download_dir)
-            .unwrap_or_else(|e| panic!("Should create directory {}: {e}", self.download_dir));
-        let parsed_url = Url::parse(url).unwrap_or_else(|e| panic!("Should parse url {url}: {e}"));
+        fs::create_dir_all(&self.config.download_dir)
+            .unwrap_or_else(|e| panic!("Should create {}: {e}", self.config.download_dir));
+        let parsed_url = Url::parse(url).unwrap_or_else(|e| panic!("Should parse {url}: {e}"));
         let filename = parsed_url
             .path_segments()
             .and_then(|segments| segments.last())
             .unwrap_or_else(|| panic!("Should parse filename from {url}"));
 
-        Path::new(&self.download_dir).join(filename)
+        Path::new(&self.config.download_dir).join(filename)
     }
 
     async fn save_file(&self, url: &str, filepath: &PathBuf) {
@@ -49,7 +57,7 @@ impl Downloader {
         // Section "Fair Access"
         let response = client
             .get(url)
-            .header(USER_AGENT, self.user_agent.to_string())
+            .header(USER_AGENT, self.config.user_agent.to_string())
             .header(ACCEPT_ENCODING, "gzip,deflate".to_string())
             .header(HOST, "www.sec.gov".to_string())
             .send()
@@ -60,8 +68,8 @@ impl Downloader {
         let content = response
             .text()
             .await
-            .unwrap_or_else(|e| panic!("Should parse response from {url}: {e}"));
+            .unwrap_or_else(|e| panic!("Should parse response body from {url}: {e}"));
         copy(&mut content.as_bytes(), &mut dest)
-            .unwrap_or_else(|e| panic!("Should copy download content to file: {e}"));
+            .unwrap_or_else(|e| panic!("Should copy downloaded file {url} to {filepath:?}: {e}"));
     }
 }
