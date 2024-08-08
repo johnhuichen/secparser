@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::traits::{FileLines, FileReader};
 
-use super::files::CikLookupFiles;
+use super::data_source::CikLookupDataSource;
 
 #[derive(Debug)]
 pub struct CikLookup {
@@ -35,11 +35,11 @@ pub struct CikLookupRecords {
 impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
-    pub fn new(files: CikLookupFiles) -> Result<Self> {
-        let count = Self::get_lines_count(&files.lookup_filepath)?;
-        let lines = Self::get_lines(&files.lookup_filepath)?;
+    pub fn new(datasource: CikLookupDataSource) -> Result<Self> {
+        let count = Self::get_lines_count(&datasource.lookup_filepath)?;
+        let lines = Self::get_lines(&datasource.lookup_filepath)?;
 
-        let contents = fs::read_to_string(&files.tickers_exchange_filepath)?;
+        let contents = fs::read_to_string(&datasource.tickers_exchange_filepath)?;
 
         let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)?;
 
@@ -106,36 +106,14 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn it_works() -> Result<()> {
+    #[test]
+    fn it_works() -> Result<()> {
         let user_agent = "example@secparser.com".to_string();
         let download_config = DownloadConfigBuilder::default()
             .user_agent(user_agent)
             .build()?;
-        let files = CikLookupFiles::download(download_config).await?;
-        let records = CikLookupRecords::new(files)?;
-
-        for r in records {
-            if !r.ticker.is_empty() {
-                assert_eq!(r.cik, 1084869);
-                assert_eq!(r.name, "1 800 FLOWERS COM INC");
-                assert_eq!(r.ticker, "FLWS");
-                assert_eq!(r.exchange, "Nasdaq");
-                break;
-            }
-        }
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn it_parses_cached_files() -> Result<()> {
-        let user_agent = "example@secparser.com".to_string();
-        let download_config = DownloadConfigBuilder::default()
-            .user_agent(user_agent)
-            .build()?;
-        let files = CikLookupFiles::get_local_cache(download_config)?;
-        let records = CikLookupRecords::new(files)?;
+        let datasource = CikLookupDataSource::get(download_config)?;
+        let records = CikLookupRecords::new(datasource)?;
 
         for r in records {
             if !r.ticker.is_empty() {

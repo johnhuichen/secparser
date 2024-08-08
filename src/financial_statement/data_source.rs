@@ -5,34 +5,26 @@ use chrono::{Datelike, Months, NaiveDate, Utc};
 
 use crate::downloader::{DownloadConfig, Downloader};
 
-pub struct FsFiles {
-    pub files: Vec<PathBuf>,
+#[derive(Clone)]
+pub struct FsDataSource {
+    pub zip_files: Vec<PathBuf>,
 }
 
-impl FsFiles {
-    pub fn get_local_cache(download_config: DownloadConfig) -> Result<Self> {
-        let downloader = Downloader::new(download_config);
-        let urls = Self::get_urls();
-        let files = urls
-            .into_iter()
-            .map(|u| downloader.get_filepath(&u).unwrap())
-            .collect::<Vec<PathBuf>>();
-
-        Ok(Self { files })
-    }
-
-    pub async fn download(download_config: DownloadConfig) -> Result<Self> {
-        let mut files = Vec::new();
+impl FsDataSource {
+    pub fn get(download_config: DownloadConfig) -> Result<Self> {
+        let mut zip_files = Vec::new();
 
         let downloader = Downloader::new(download_config);
 
         let urls = Self::get_urls();
+
         for url in urls {
-            let filepath = downloader.download(&url).await?;
-            files.push(filepath);
+            let zip_filepath = downloader.download(&url)?;
+
+            zip_files.push(zip_filepath);
         }
 
-        Ok(Self { files })
+        Ok(Self { zip_files })
     }
 
     fn get_urls() -> Vec<String> {
