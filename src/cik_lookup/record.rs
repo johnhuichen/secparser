@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::fs::{self};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::traits::{FileLines, FileReader};
 
@@ -19,15 +19,13 @@ pub struct CikLookup {
 type TickersExchangeFields = Vec<String>;
 type TickersExchangeDataItem = (usize, Option<String>, Option<String>, Option<String>);
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 struct TickersExchangeData {
     fields: TickersExchangeFields,
     data: Vec<TickersExchangeDataItem>,
 }
 
 pub struct CikLookupRecords {
-    pub count: usize,
-
     lines: FileLines,
     tickers_exchange: HashMap<usize, (Option<String>, Option<String>)>,
 }
@@ -36,11 +34,9 @@ impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
     pub fn new(datasource: CikLookupDataSource) -> Result<Self> {
-        let count = Self::get_lines_count(&datasource.lookup_filepath)?;
         let lines = Self::get_lines(&datasource.lookup_filepath)?;
 
         let contents = fs::read_to_string(&datasource.tickers_exchange_filepath)?;
-
         let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)?;
 
         assert_eq!(
@@ -55,10 +51,31 @@ impl CikLookupRecords {
             .collect::<HashMap<_, _>>();
 
         Ok(Self {
-            count,
             lines,
             tickers_exchange,
         })
+    }
+
+    fn get_one_record(&self, name: &str, cik: &str) -> CikLookup {
+        let cik = cik
+            .parse::<usize>()
+            .unwrap_or_else(|e| panic!("Should parse cik: {e}"));
+        let (ticker, exchange) = self.tickers_exchange.get(&cik).unwrap_or(&(None, None));
+        let ticker = match ticker {
+            Some(v) => v.to_string(),
+            None => "".to_string(),
+        };
+        let exchange = match exchange {
+            Some(v) => v.to_string(),
+            None => "".to_string(),
+        };
+
+        CikLookup {
+            cik,
+            name: name.to_string(),
+            ticker,
+            exchange,
+        }
     }
 }
 
@@ -71,28 +88,8 @@ impl Iterator for CikLookupRecords {
                 let line = line.unwrap_or_else(|e| panic!("Should get line in cik lookup: {e}"));
                 let line = &line[..line.len() - 1];
 
-                line.rsplit_once(":").map(|(name, cik)| {
-                    let cik = cik
-                        .parse::<usize>()
-                        .unwrap_or_else(|e| panic!("Should parse cik: {e}"));
-                    let (ticker, exchange) =
-                        self.tickers_exchange.get(&cik).unwrap_or(&(None, None));
-                    let ticker = match ticker {
-                        Some(v) => v.to_string(),
-                        None => "".to_string(),
-                    };
-                    let exchange = match exchange {
-                        Some(v) => v.to_string(),
-                        None => "".to_string(),
-                    };
-
-                    Self::Item {
-                        cik,
-                        name: name.to_string(),
-                        ticker,
-                        exchange,
-                    }
-                })
+                line.rsplit_once(":")
+                    .map(|(name, cik)| self.get_one_record(name, cik))
             }
             None => None,
         }
@@ -108,11 +105,14 @@ mod tests {
 
     #[test]
     fn it_works() -> Result<()> {
+        env_logger::init();
+
         let user_agent = "example@secparser.com".to_string();
         let download_config = DownloadConfigBuilder::default()
             .user_agent(user_agent)
+            .download_dir("./download".to_string())
             .build()?;
-        let datasource = CikLookupDataSource::get(download_config)?;
+        let datasource = CikLookupDataSource::get(&download_config)?;
         let records = CikLookupRecords::new(datasource)?;
 
         for r in records {

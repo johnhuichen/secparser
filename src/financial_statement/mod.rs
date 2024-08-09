@@ -1,2 +1,2 @@
 pub mod data_source;
-pub mod submission_record;
+pub mod tag_record;

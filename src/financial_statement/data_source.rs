@@ -11,10 +11,10 @@ pub struct FsDataSource {
 }
 
 impl FsDataSource {
-    pub fn get(download_config: DownloadConfig) -> Result<Self> {
+    pub fn get(download_config: &DownloadConfig) -> Result<Self> {
         let mut zip_files = Vec::new();
 
-        let downloader = Downloader::new(download_config);
+        let downloader = Downloader::new(download_config.clone());
 
         let urls = Self::get_urls();
 
