@@ -11,11 +11,11 @@ fn main() -> Result<()> {
         .user_agent(user_agent)
         .download_dir("./download".to_string())
         .build()?;
-    let datasource = CikLookupDataSource::get(download_config)?;
+    let datasource = CikLookupDataSource::get(&download_config)?;
     let records = CikLookupRecords::new(datasource)?;
 
     for r in records {
-        println!("{r:?}");
+        log::info!("{r:?}");
         break;
     }
 

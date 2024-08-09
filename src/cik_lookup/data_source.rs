@@ -13,8 +13,8 @@ impl CikLookupDataSource {
     const TICKERS_EXCHANGE_URL: &'static str =
         "https://www.sec.gov/files/company_tickers_exchange.json";
 
-    pub fn get(download_config: DownloadConfig) -> Result<Self> {
-        let downloader = Downloader::new(download_config);
+    pub fn get(download_config: &DownloadConfig) -> Result<Self> {
+        let downloader = Downloader::new(download_config.clone());
         let lookup_filepath = downloader.download(Self::LOOKUP_URL)?;
         let tickers_exchange_filepath = downloader.download(Self::TICKERS_EXCHANGE_URL)?;
 
