@@ -56,7 +56,7 @@ impl CikLookupRecords {
         })
     }
 
-    fn get_one_record(&self, name: &str, cik: &str) -> CikLookup {
+    fn parse_one_record(&self, name: &str, cik: &str) -> CikLookup {
         let cik = cik
             .parse::<usize>()
             .unwrap_or_else(|e| panic!("Should parse cik: {e}"));
@@ -89,7 +89,7 @@ impl Iterator for CikLookupRecords {
                 let line = &line[..line.len() - 1];
 
                 line.rsplit_once(":")
-                    .map(|(name, cik)| self.get_one_record(name, cik))
+                    .map(|(name, cik)| self.parse_one_record(name, cik))
             }
             None => None,
         }
@@ -112,8 +112,8 @@ mod tests {
             .user_agent(user_agent)
             .download_dir("./download".to_string())
             .build()?;
-        let datasource = CikLookupDataSource::get(&download_config)?;
-        let records = CikLookupRecords::new(datasource)?;
+        let data_source = CikLookupDataSource::new(&download_config)?;
+        let records = CikLookupRecords::new(data_source)?;
 
         for r in records {
             if !r.ticker.is_empty() {
