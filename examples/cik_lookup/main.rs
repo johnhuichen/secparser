@@ -1,18 +1,18 @@
 use anyhow::Result;
-use secparser::cik_lookup::cik_lookup::CikLookupRecords;
-use secparser::cik_lookup::files::CikLookupFiles;
+use secparser::cik_lookup::data_source::CikLookupDataSource;
+use secparser::cik_lookup::record::CikLookupRecords;
 use secparser::downloader::DownloadConfigBuilder;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     env_logger::init();
 
     let user_agent = "example@secparser.com".to_string();
     let download_config = DownloadConfigBuilder::default()
         .user_agent(user_agent)
+        .download_dir("./download".to_string())
         .build()?;
-    let files = CikLookupFiles::download(download_config).await?;
-    let records = CikLookupRecords::new(files)?;
+    let datasource = CikLookupDataSource::get(download_config)?;
+    let records = CikLookupRecords::new(datasource)?;
 
     for r in records {
         println!("{r:?}");

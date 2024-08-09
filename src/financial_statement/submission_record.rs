@@ -1,9 +1,11 @@
+use std::fs::File;
+
 use anyhow::Result;
 use serde::Deserialize;
 
-use crate::traits::{FileLines, FileReader};
+use crate::traits::FileReader;
 
-use super::files::FsFiles;
+use super::data_source::FsDataSource;
 
 #[derive(Debug, Deserialize)]
 pub struct FsSubmission {
@@ -58,7 +60,14 @@ pub struct FsSubmissionRecords {
 impl FileReader for FsSubmissionRecords {}
 
 impl FsSubmissionRecords {
-    pub async fn new(files: FsFiles) -> Result<Self> {
+    pub fn new(datasource: FsDataSource) -> Result<Self> {
+        for file in datasource.zip_files {
+            let file = File::open(file)?;
+            println!("{:?}", file);
+            let archive = zip::ZipArchive::new(file)?;
+            println!("{:?}", archive.len());
+        }
+
         Ok(FsSubmissionRecords {})
     }
 }
