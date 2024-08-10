@@ -10,18 +10,29 @@ use zip::ZipArchive;
 pub type FileIter = vec::IntoIter<PathBuf>;
 pub type MaybeRecordIter<T> = Option<vec::IntoIter<T>>;
 
-pub trait FsRecords<I>
+pub struct FsRecordsIters<T> {
+    pub maybe_record_iter: MaybeRecordIter<T>,
+    pub file_iter: FileIter,
+}
+
+#[derive(Clone)]
+pub struct FsRecordsConfig {
+    pub strict_mode: bool,
+}
+
+pub trait FsRecords<T>
 where
-    I: DeserializeOwned,
+    T: DeserializeOwned,
 {
-    fn get_file_iter_field(&mut self) -> &mut FileIter;
-    fn get_maybe_record_iter_field(&mut self) -> &mut MaybeRecordIter<I>;
-    fn update_maybe_record_iter(&mut self, maybe_record_iter: MaybeRecordIter<I>);
+    fn get_iters(&mut self) -> &mut FsRecordsIters<T>;
+    fn update_iters(&mut self, maybe_record_iter: MaybeRecordIter<T>);
+    fn get_config(&self) -> &FsRecordsConfig;
 
     fn get_maybe_record_iter(
+        config: FsRecordsConfig,
         file_iter: &mut FileIter,
         tsv_filename: &str,
-    ) -> Result<MaybeRecordIter<I>> {
+    ) -> Result<MaybeRecordIter<T>> {
         match file_iter.next() {
             Some(filepath) => {
                 let file = File::open(&filepath)?;
@@ -29,11 +40,18 @@ where
 
                 let tag_file = archive.by_name(tsv_filename)?;
                 let reader = BufReader::new(tag_file);
-                let reader = ReaderBuilder::new().delimiter(b'\t').from_reader(reader);
+                let reader = ReaderBuilder::new()
+                    .quoting(false)
+                    .delimiter(b'\t')
+                    .from_reader(reader);
                 let record_iter = reader
                     .into_deserialize()
-                    .map(|r| r.unwrap_or_else(|e| panic!("Should parse tsv: {e}")))
-                    .collect::<Vec<I>>()
+                    .map(|r| r.map_err(|e| anyhow::anyhow!(e)))
+                    .filter_map(|r| match config.strict_mode {
+                        true => Self::strict_parse(r, &filepath),
+                        false => Self::flexible_parse(r, &filepath),
+                    })
+                    .collect::<Vec<T>>()
                     .into_iter();
 
                 Ok(Some(record_iter))
@@ -42,16 +60,36 @@ where
         }
     }
 
-    fn do_next(&mut self, tsv_filename: &str) -> Option<I> {
+    fn flexible_parse(reader: Result<T>, filepath: &PathBuf) -> Option<T> {
+        match reader {
+            Ok(v) => Some(v),
+            Err(e) => {
+                log::error!("Should parse {filepath:?}: {e}");
+                None
+            }
+        }
+    }
+
+    fn strict_parse(reader: Result<T>, filepath: &PathBuf) -> Option<T> {
+        match reader {
+            Ok(v) => Some(v),
+            Err(e) => panic!("Should parse {filepath:?}: {e}"),
+        }
+    }
+
+    fn do_next(&mut self, tsv_filename: &str) -> Option<T> {
         loop {
-            match self.get_maybe_record_iter_field() {
+            match self.get_iters().maybe_record_iter.as_mut() {
                 Some(record_iter) => match record_iter.next() {
                     Some(v) => return Some(v),
                     None => {
-                        let maybe_record_iter =
-                            Self::get_maybe_record_iter(self.get_file_iter_field(), tsv_filename)
-                                .unwrap_or_else(|e| panic!("Should get record iterator: {e}"));
-                        self.update_maybe_record_iter(maybe_record_iter);
+                        let maybe_record_iter = Self::get_maybe_record_iter(
+                            self.get_config().clone(),
+                            &mut self.get_iters().file_iter,
+                            tsv_filename,
+                        )
+                        .unwrap_or_else(|e| panic!("Should get record iterator: {e}"));
+                        self.update_iters(maybe_record_iter);
                     }
                 },
                 None => return None,
