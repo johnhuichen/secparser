@@ -1,16 +1,10 @@
-use csv::ReaderBuilder;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::PathBuf;
-use std::vec;
-use zip::ZipArchive;
-
 use anyhow::Result;
 use serde::Deserialize;
 
 use crate::deserializer::bool_from_int;
 
 use super::data_source::FsDataSource;
+use super::record::{FileIter, FsRecords, MaybeRecordIter};
 
 #[derive(Debug, Deserialize)]
 pub struct FsTag {
@@ -27,48 +21,36 @@ pub struct FsTag {
     pub doc: String,
 }
 
-type FileIter = vec::IntoIter<PathBuf>;
-type RecordIter = vec::IntoIter<FsTag>;
-
 pub struct FsTagRecords {
     file_iter: FileIter,
-    maybe_record_iter: Option<RecordIter>,
+    maybe_record_iter: MaybeRecordIter<FsTag>,
+}
+
+impl FsRecords<FsTag> for FsTagRecords {
+    fn get_file_iter_field(&mut self) -> &mut FileIter {
+        &mut self.file_iter
+    }
+
+    fn get_maybe_record_iter_field(&mut self) -> &mut MaybeRecordIter<FsTag> {
+        &mut self.maybe_record_iter
+    }
+
+    fn update_maybe_record_iter(&mut self, maybe_record_iter: MaybeRecordIter<FsTag>) {
+        self.maybe_record_iter = maybe_record_iter;
+    }
 }
 
 impl FsTagRecords {
-    pub fn new(datasource: FsDataSource) -> Result<Self> {
-        let mut file_iter = datasource.zip_files.into_iter();
-        let maybe_record_iter = Self::get_record_iter(&mut file_iter)?;
+    const TSV_FILENAME: &'static str = "tag.tsv";
+
+    pub fn new(data_source: FsDataSource) -> Result<Self> {
+        let mut file_iter = data_source.filepaths.into_iter();
+        let maybe_record_iter = Self::get_maybe_record_iter(&mut file_iter, Self::TSV_FILENAME)?;
 
         Ok(Self {
             file_iter,
             maybe_record_iter,
         })
-    }
-
-    pub fn get_record_iter(file_iter: &mut FileIter) -> Result<Option<RecordIter>> {
-        match file_iter.next() {
-            Some(filepath) => {
-                let file = File::open(&filepath)
-                    .unwrap_or_else(|e| panic!("Should open {filepath:?}: {e}"));
-                let mut archive = ZipArchive::new(file)
-                    .unwrap_or_else(|e| panic!("Should read zip file {filepath:?}: {e}"));
-
-                let tag_file = archive
-                    .by_name("tag.tsv")
-                    .unwrap_or_else(|e| panic!("Should get tag.tsv: {e}"));
-                let reader = BufReader::new(tag_file);
-                let reader = ReaderBuilder::new().delimiter(b'\t').from_reader(reader);
-                let record_iter = reader
-                    .into_deserialize()
-                    .map(|r| r.unwrap_or_else(|e| panic!("Should parse csv: {e}")))
-                    .collect::<Vec<FsTag>>()
-                    .into_iter();
-
-                Ok(Some(record_iter))
-            }
-            None => Ok(None),
-        }
     }
 }
 
@@ -76,18 +58,6 @@ impl Iterator for FsTagRecords {
     type Item = FsTag;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.maybe_record_iter.as_mut() {
-                Some(record_iter) => match record_iter.next() {
-                    Some(v) => return Some(v),
-                    None => {
-                        let maybe_record_iter = Self::get_record_iter(&mut self.file_iter)
-                            .unwrap_or_else(|e| panic!("Should get record iterator: {e}"));
-                        self.maybe_record_iter = maybe_record_iter;
-                    }
-                },
-                None => return None,
-            }
-        }
+        self.do_next(Self::TSV_FILENAME)
     }
 }

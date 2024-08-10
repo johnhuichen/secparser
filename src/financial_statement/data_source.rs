@@ -4,15 +4,16 @@ use std::path::PathBuf;
 use chrono::{Datelike, Months, NaiveDate, Utc};
 
 use crate::downloader::{DownloadConfig, Downloader};
+use crate::traits::DataSource;
 
 #[derive(Clone)]
 pub struct FsDataSource {
-    pub zip_files: Vec<PathBuf>,
+    pub filepaths: Vec<PathBuf>,
 }
 
 impl FsDataSource {
-    pub fn get(download_config: &DownloadConfig) -> Result<Self> {
-        let mut zip_files = Vec::new();
+    pub fn new(download_config: &DownloadConfig) -> Result<Self> {
+        let mut filepaths = Vec::new();
 
         let downloader = Downloader::new(download_config.clone());
 
@@ -21,10 +22,10 @@ impl FsDataSource {
         for url in urls {
             let zip_filepath = downloader.download(&url)?;
 
-            zip_files.push(zip_filepath);
+            filepaths.push(zip_filepath);
         }
 
-        Ok(Self { zip_files })
+        Ok(Self { filepaths })
     }
 
     fn get_urls() -> Vec<String> {
@@ -73,5 +74,15 @@ impl FsDataSource {
         }
 
         result
+    }
+}
+
+impl DataSource for FsDataSource {
+    fn validate_cache(&self) -> Result<()> {
+        for filepath in &self.filepaths {
+            Self::validate_non_empty_file(filepath)?;
+        }
+
+        Ok(())
     }
 }
