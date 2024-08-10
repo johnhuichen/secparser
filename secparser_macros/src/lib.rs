@@ -94,7 +94,10 @@ fn tests_codegen(
 
             #[test]
             fn #test_fn() -> Result<()> {
-                env_logger::init();
+                env_logger::builder()
+                    .is_test(true)
+                    .try_init()
+                    .unwrap_or_default();
 
                 let user_agent = "example@secparser.com".to_string();
                 let download_config = DownloadConfigBuilder::default()
@@ -102,7 +105,7 @@ fn tests_codegen(
                     .download_dir("./download".to_string())
                     .build()?;
 
-                let from_year = 2009;
+                let from_year = 2024;
                 let data_source = FsDataSource::new(&download_config, from_year)?;
                 data_source.validate_cache()?;
                 log::info!("Data source cache is validated");
@@ -111,7 +114,7 @@ fn tests_codegen(
                 let records = #records_class::new(data_source, record_config)?;
 
                 for record in records {
-                    log::info!("{:?}", record);
+                    log::debug!("{:?}", record);
                 }
 
                 Ok(())

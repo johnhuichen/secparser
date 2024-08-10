@@ -106,7 +106,10 @@ mod tests {
 
     #[test]
     fn it_parses_cik_lookup() -> Result<()> {
-        env_logger::init();
+        env_logger::builder()
+            .is_test(true)
+            .try_init()
+            .unwrap_or_default();
 
         let user_agent = "example@secparser.com".to_string();
         let download_config = DownloadConfigBuilder::default()
@@ -117,7 +120,7 @@ mod tests {
         let records = CikLookupRecords::new(data_source)?;
 
         for r in records {
-            log::info!("{r:?}");
+            log::debug!("{r:?}");
         }
 
         Ok(())
