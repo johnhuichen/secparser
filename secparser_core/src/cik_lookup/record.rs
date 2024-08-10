@@ -85,7 +85,8 @@ impl Iterator for CikLookupRecords {
     fn next(&mut self) -> Option<Self::Item> {
         match self.lines.next() {
             Some(line) => {
-                let line = line.unwrap_or_else(|e| panic!("Should get line in cik lookup: {e}"));
+                let line =
+                    line.unwrap_or_else(|e| panic!("Should get line in cik-lookup-data.txt: {e}"));
                 let line = &line[..line.len() - 1];
 
                 line.rsplit_once(":")
