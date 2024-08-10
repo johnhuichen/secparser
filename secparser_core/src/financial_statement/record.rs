@@ -1,5 +1,6 @@
 use anyhow::Result;
 use csv::ReaderBuilder;
+use derive_builder::Builder;
 use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::io::BufReader;
@@ -17,9 +18,12 @@ pub struct FsRecordsIters<T> {
     pub file_iter: FileIter,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Builder)]
 pub struct FsRecordsConfig {
-    pub strict_mode: bool,
+    #[builder(default = "true")]
+    pub csv_flexible: bool,
+    #[builder(default = "false")]
+    pub csv_quoting: bool,
 }
 
 pub trait FsRecords<T>
@@ -61,39 +65,19 @@ where
                 let tag_file = archive.by_name(Self::get_tsv_filename())?;
                 let reader = BufReader::new(tag_file);
                 let reader = ReaderBuilder::new()
-                    .quoting(false)
+                    .quoting(config.csv_quoting)
+                    .flexible(config.csv_flexible)
                     .delimiter(b'\t')
                     .from_reader(reader);
                 let record_iter = reader
                     .into_deserialize()
-                    .map(|r| r.map_err(|e| anyhow::anyhow!(e)))
-                    .filter_map(|r| match config.strict_mode {
-                        true => Self::strict_parse(r, &filepath),
-                        false => Self::flexible_parse(r, &filepath),
-                    })
+                    .filter_map(|r| r.ok())
                     .collect::<Vec<T>>()
                     .into_iter();
 
                 Ok(Some(record_iter))
             }
             None => Ok(None),
-        }
-    }
-
-    fn flexible_parse(reader: Result<T>, filepath: &PathBuf) -> Option<T> {
-        match reader {
-            Ok(v) => Some(v),
-            Err(e) => {
-                log::error!("Should parse {filepath:?}: {e}");
-                None
-            }
-        }
-    }
-
-    fn strict_parse(reader: Result<T>, filepath: &PathBuf) -> Option<T> {
-        match reader {
-            Ok(v) => Some(v),
-            Err(e) => panic!("Should parse {filepath:?}: {e}"),
         }
     }
 

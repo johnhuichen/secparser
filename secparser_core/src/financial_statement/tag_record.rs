@@ -1,11 +1,7 @@
-use anyhow::Result;
 use secparser_macros::FsRecordsImpl;
 use serde::Deserialize;
 
-use super::data_source::FsDataSource;
-use super::record::{FsRecords, FsRecordsConfig, FsRecordsIters, MaybeRecordIter};
-
-const TSV_FILENAME: &'static str = "tag.tsv";
+const TSV_FILENAME: &str = "tag.tsv";
 
 #[derive(Debug, Deserialize, FsRecordsImpl)]
 pub struct FsTag {
