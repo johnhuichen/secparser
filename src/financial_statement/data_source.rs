@@ -12,12 +12,12 @@ pub struct FsDataSource {
 }
 
 impl FsDataSource {
-    pub fn new(download_config: &DownloadConfig, from_date: NaiveDate) -> Result<Self> {
+    pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self> {
         let mut filepaths = Vec::new();
 
         let downloader = Downloader::new(download_config.clone());
 
-        let urls = Self::get_urls(from_date);
+        let urls = Self::get_urls(from_year);
 
         for url in urls {
             let zip_filepath = downloader.download(&url)?;
@@ -28,7 +28,7 @@ impl FsDataSource {
         Ok(Self { filepaths })
     }
 
-    fn get_urls(from_date: NaiveDate) -> Vec<String> {
+    fn get_urls(from_year: i32) -> Vec<String> {
         let mut result = Vec::new();
 
         let now = Utc::now();
@@ -37,7 +37,8 @@ impl FsDataSource {
 
         let one_year_ago = NaiveDate::from_ymd_opt(year - 1, month, 1).unwrap();
 
-        let mut quarterly = from_date;
+        let mut quarterly = NaiveDate::from_ymd_opt(from_year, 1, 1).unwrap();
+
         while quarterly.checked_add_months(Months::new(3)).unwrap() < one_year_ago {
             let (_, year) = quarterly.year_ce();
             let quarter = match quarterly.month0() {
