@@ -5,31 +5,66 @@ use super::data_source::FsDataSource;
 use super::record::{FsRecords, FsRecordsConfig, FsRecordsIters, MaybeRecordIter};
 
 #[derive(Debug, Deserialize)]
-pub struct FsTag {
-    pub tag: String,
-    pub version: String,
-    pub custom: Option<u8>,
-    pub r#abstract: Option<u8>,
-    pub datatype: String,
-    pub iord: String,
-    pub crdr: String,
-    pub tlabel: String,
-    pub doc: String,
+pub struct FsSub {
+    pub adsh: String,
+    pub cik: usize,
+    pub name: String,
+    pub sic: String,
+
+    pub countryba: String,
+    pub stprba: String,
+    pub cityba: String,
+    pub zipba: String,
+    pub bas1: String,
+    pub bas2: String,
+    pub baph: String,
+
+    pub countryma: String,
+    pub stprma: String,
+    pub cityma: String,
+    pub zipma: String,
+    pub mas1: String,
+    pub mas2: String,
+
+    pub countryinc: String,
+    pub stprinc: String,
+
+    pub ein: String,
+    pub former: String,
+    pub changed: String,
+    pub afs: String,
+    pub wksi: Option<u8>,
+    pub fye: String,
+    pub form: String,
+    pub period: String,
+    pub fy: String,
+    pub fp: String,
+    pub filed: String,
+    pub accepted: String,
+    pub prevrpt: Option<u8>,
+    pub detail: Option<u8>,
+    pub instance: String,
+    pub nciks: Option<u16>,
+    pub aciks: String,
+    pub pubfloatusd: Option<f32>,
+    pub floatdate: String,
+    pub floataxis: String,
+    pub floatmems: Option<u8>,
 }
 
-pub struct FsTagRecords {
-    iters: FsRecordsIters<FsTag>,
+pub struct FsSubRecords {
+    iters: FsRecordsIters<FsSub>,
     config: FsRecordsConfig,
 }
 
-impl FsRecords<FsTag> for FsTagRecords {
-    const TSV_FILENAME: &'static str = "tag.tsv";
+impl FsRecords<FsSub> for FsSubRecords {
+    const TSV_FILENAME: &'static str = "sub.tsv";
 
-    fn get_iters(&mut self) -> &mut FsRecordsIters<FsTag> {
+    fn get_iters(&mut self) -> &mut FsRecordsIters<FsSub> {
         &mut self.iters
     }
 
-    fn update_iters(&mut self, maybe_record_iter: MaybeRecordIter<FsTag>) {
+    fn update_iters(&mut self, maybe_record_iter: MaybeRecordIter<FsSub>) {
         self.iters.maybe_record_iter = maybe_record_iter
     }
 
@@ -38,7 +73,7 @@ impl FsRecords<FsTag> for FsTagRecords {
     }
 }
 
-impl FsTagRecords {
+impl FsSubRecords {
     pub fn new(data_source: FsDataSource, config: FsRecordsConfig) -> Result<Self> {
         let iters = Self::init_iters(data_source, &config)?;
 
@@ -46,8 +81,8 @@ impl FsTagRecords {
     }
 }
 
-impl Iterator for FsTagRecords {
-    type Item = FsTag;
+impl Iterator for FsSubRecords {
+    type Item = FsSub;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.do_next()
@@ -63,7 +98,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_parses_fs_tag() -> Result<()> {
+    fn it_parses_fs_sub() -> Result<()> {
         env_logger::init();
 
         let user_agent = "example@secparser.com".to_string();
@@ -78,7 +113,7 @@ mod tests {
         log::info!("Data source cache is validated");
 
         let record_config = FsRecordsConfig { strict_mode: true };
-        let records = FsTagRecords::new(data_source, record_config)?;
+        let records = FsSubRecords::new(data_source, record_config)?;
 
         for record in records {
             log::info!("{:?}", record);
