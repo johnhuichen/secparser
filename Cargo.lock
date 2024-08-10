@@ -494,6 +494,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "encoding_rs_io"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cc3c5651fb62ab8aa3103998dade57efdd028544bd300516baa31840c252a83"
+dependencies = [
+ "encoding_rs",
+]
+
+[[package]]
 name = "env_filter"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1363,7 +1372,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "secparser"
+name = "secparser_core"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -1371,13 +1380,25 @@ dependencies = [
  "colored",
  "csv",
  "derive_builder",
+ "encoding_rs",
+ "encoding_rs_io",
  "env_logger",
  "log",
  "reqwest",
  "retry",
+ "secparser_macros",
  "serde",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "secparser_macros"
+version = "0.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
