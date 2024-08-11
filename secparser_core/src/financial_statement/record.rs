@@ -22,7 +22,7 @@ pub struct FsRecordsIters<T> {
 pub struct FsRecordsConfig {
     #[builder(default = "true")]
     pub csv_flexible: bool,
-    #[builder(default = "false")]
+    #[builder(default = "true")]
     pub csv_quoting: bool,
     #[builder(default = "false")]
     pub eager_panic: bool,
@@ -73,16 +73,12 @@ where
                     .from_reader(reader);
                 let record_iter = reader
                     .into_deserialize()
-                    .map(|r| {
-                        r.map_err(|e| {
-                            if config.eager_panic {
-                                panic!("Should parse {filepath:?}: {e}");
-                            } else {
-                                log::error!("Should parse {filepath:?}: {e}");
-                            }
-                        })
+                    .filter_map(|r| match config.eager_panic {
+                        true => {
+                            Some(r.unwrap_or_else(|e| panic!("Should parse {filepath:?}: {e}")))
+                        }
+                        false => r.ok(),
                     })
-                    .filter_map(|r| r.ok())
                     .collect::<Vec<T>>()
                     .into_iter();
 
