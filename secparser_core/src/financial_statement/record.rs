@@ -24,6 +24,8 @@ pub struct FsRecordsConfig {
     pub csv_flexible: bool,
     #[builder(default = "false")]
     pub csv_quoting: bool,
+    #[builder(default = "false")]
+    pub eager_panic: bool,
 }
 
 pub trait FsRecords<T>
@@ -71,6 +73,15 @@ where
                     .from_reader(reader);
                 let record_iter = reader
                     .into_deserialize()
+                    .map(|r| {
+                        r.map_err(|e| {
+                            if config.eager_panic {
+                                panic!("Should parse {filepath:?}: {e}");
+                            } else {
+                                log::error!("Should parse {filepath:?}: {e}");
+                            }
+                        })
+                    })
                     .filter_map(|r| r.ok())
                     .collect::<Vec<T>>()
                     .into_iter();

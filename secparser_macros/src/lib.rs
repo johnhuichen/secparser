@@ -115,7 +115,7 @@ fn tests_codegen(
                 let data_source = FsDataSource::new(&download_config, from_year)?;
                 data_source.validate_cache()?;
 
-                let record_config = FsRecordsConfigBuilder::default().build()?;
+                let record_config = FsRecordsConfigBuilder::default().eager_panic(true).build()?;
                 let records = #records_class::new(data_source, record_config)?;
 
                 for record in records {
