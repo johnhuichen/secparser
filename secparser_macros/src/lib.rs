@@ -35,6 +35,10 @@ fn records_impl_codegen(
     records_class: &proc_macro2::Ident,
 ) -> proc_macro2::TokenStream {
     quote! {
+        use anyhow::Result;
+        use crate::financial_statement::data_source::FsDataSource;
+        use crate::financial_statement::record::{FsRecords, FsRecordsConfig, FsRecordsIters, MaybeRecordIter};
+
         pub struct #records_class {
             iters: FsRecordsIters<#data_class>,
             config: FsRecordsConfig,
@@ -86,9 +90,11 @@ fn tests_codegen(
     quote! {
         #[cfg(test)]
         mod tests {
-            use crate::downloader::DownloadConfigBuilder;
-            use crate::traits::DataSource;
             use anyhow::Result;
+
+            use crate::downloader::DownloadConfigBuilder;
+            use crate::financial_statement::record::FsRecordsConfigBuilder;
+            use crate::traits::DataSource;
 
             use super::*;
 
@@ -108,9 +114,8 @@ fn tests_codegen(
                 let from_year = 2024;
                 let data_source = FsDataSource::new(&download_config, from_year)?;
                 data_source.validate_cache()?;
-                log::info!("Data source cache is validated");
 
-                let record_config = FsRecordsConfig { strict_mode: true };
+                let record_config = FsRecordsConfigBuilder::default().build()?;
                 let records = #records_class::new(data_source, record_config)?;
 
                 for record in records {

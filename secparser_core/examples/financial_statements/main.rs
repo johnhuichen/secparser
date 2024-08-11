@@ -1,9 +1,9 @@
 use anyhow::Result;
-use secparser::downloader::DownloadConfigBuilder;
-use secparser::financial_statement::data_source::FsDataSource;
-use secparser::financial_statement::record::FsRecordsConfig;
-use secparser::financial_statement::tag_record::FsTagRecords;
-use secparser::traits::DataSource;
+use secparser_core::downloader::DownloadConfigBuilder;
+use secparser_core::financial_statement::data_source::FsDataSource;
+use secparser_core::financial_statement::record::{FsRecordsConfig, FsRecordsConfigBuilder};
+use secparser_core::financial_statement::tag_record::FsTagRecords;
+use secparser_core::traits::DataSource;
 
 fn main() -> Result<()> {
     env_logger::init();
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
 
     // Create a config:
     // strict mode = true, program will panic if parse error occurs
-    let record_config = FsRecordsConfig { strict_mode: true };
+    let record_config = FsRecordsConfigBuilder::default().build()?;
 
     // Get a list of tag records
     let records = FsTagRecords::new(data_source, record_config)?;
