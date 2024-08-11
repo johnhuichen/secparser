@@ -1,9 +1,11 @@
 use anyhow::Result;
-use secparser_core::downloader::DownloadConfigBuilder;
-use secparser_core::financial_statement::data_source::FsDataSource;
-use secparser_core::financial_statement::record::{FsRecordsConfig, FsRecordsConfigBuilder};
-use secparser_core::financial_statement::tag_record::FsTagRecords;
-use secparser_core::traits::DataSource;
+use secparser_core::{
+    downloader::DownloadConfigBuilder,
+    financial_statement::{
+        data_source::FsDataSource, record::FsRecordsConfigBuilder, tag_record::FsTagRecords,
+    },
+    traits::DataSource,
+};
 
 fn main() -> Result<()> {
     env_logger::init();

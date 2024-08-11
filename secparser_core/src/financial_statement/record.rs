@@ -32,15 +32,10 @@ pub trait FsRecords<T>
 where
     T: DeserializeOwned,
 {
-    const TSV_FILENAME: &'static str;
-
     fn get_iters(&mut self) -> &mut FsRecordsIters<T>;
     fn update_iters(&mut self, maybe_record_iter: MaybeRecordIter<T>);
     fn get_config(&self) -> &FsRecordsConfig;
-
-    fn get_tsv_filename() -> &'static str {
-        Self::TSV_FILENAME
-    }
+    fn get_tsv_filename() -> &'static str;
 
     fn init_iters(
         data_source: FsDataSource,

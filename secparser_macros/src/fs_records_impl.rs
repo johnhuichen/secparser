@@ -44,8 +44,6 @@ pub fn records_impl_codegen(
         }
 
         impl FsRecords<#data_class> for #records_class {
-            const TSV_FILENAME: &'static str = TSV_FILENAME;
-
             fn get_iters(&mut self) -> &mut FsRecordsIters<#data_class> {
                 &mut self.iters
             }
@@ -56,6 +54,10 @@ pub fn records_impl_codegen(
 
             fn get_config(&self) -> &FsRecordsConfig {
                 &self.config
+            }
+
+            fn get_tsv_filename() -> &'static str {
+                TSV_FILENAME
             }
         }
 
@@ -100,7 +102,6 @@ pub fn tests_codegen(
             #[test]
             fn #test_fn() -> Result<()> {
                 env_logger::builder()
-                    .is_test(true)
                     .try_init()
                     .unwrap_or_default();
 

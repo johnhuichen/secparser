@@ -1,8 +1,9 @@
 use anyhow::Result;
-use secparser::cik_lookup::data_source::CikLookupDataSource;
-use secparser::cik_lookup::record::CikLookupRecords;
-use secparser::downloader::DownloadConfigBuilder;
-use secparser::traits::DataSource;
+use secparser_core::{
+    cik_lookup::{data_source::CikLookupDataSource, record::CikLookupRecords},
+    downloader::DownloadConfigBuilder,
+    traits::DataSource,
+};
 
 fn main() -> Result<()> {
     env_logger::init();
