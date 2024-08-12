@@ -1,31 +1,22 @@
 use anyhow::Result;
-use std::path::PathBuf;
 
 use chrono::{Datelike, Months, NaiveDate, Utc};
 
-use crate::downloader::{DownloadConfig, Downloader};
-use crate::traits::DataSource;
+use crate::data_source::DataSource;
+use crate::downloader::DownloadConfig;
 
-#[derive(Clone)]
-pub struct FsDataSource {
-    pub filepaths: Vec<PathBuf>,
+pub struct FsDataSources {
+    pub vec: Vec<DataSource>,
 }
 
-impl FsDataSource {
+impl FsDataSources {
     pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self> {
-        let mut filepaths = Vec::new();
+        let data_sources = Self::get_urls(from_year)
+            .into_iter()
+            .map(|url| DataSource::new(download_config, &url).unwrap())
+            .collect::<Vec<DataSource>>();
 
-        let downloader = Downloader::new(download_config.clone());
-
-        let urls = Self::get_urls(from_year);
-
-        for url in urls {
-            let zip_filepath = downloader.download(&url)?;
-
-            filepaths.push(zip_filepath);
-        }
-
-        Ok(Self { filepaths })
+        Ok(FsDataSources { vec: data_sources })
     }
 
     fn get_urls(from_year: i32) -> Vec<String> {
@@ -74,15 +65,5 @@ impl FsDataSource {
         }
 
         result
-    }
-}
-
-impl DataSource for FsDataSource {
-    fn validate_cache(&self) -> Result<()> {
-        for filepath in &self.filepaths {
-            Self::validate_non_empty_file(filepath)?;
-        }
-
-        Ok(())
     }
 }
