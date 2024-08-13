@@ -20,8 +20,9 @@ serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.121"
 zip = "2.1.6"
 
-anyhow = { workspace = true }
 colored = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 secparser_macros = { workspace = true }
+snafu = "0.8.4"
+url = "2.5.2"

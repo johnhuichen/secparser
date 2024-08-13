@@ -1,12 +1,32 @@
-use anyhow::Result;
 use csv::ReaderBuilder;
 use derive_builder::Builder;
 use serde::de::DeserializeOwned;
+use snafu::{Location, Snafu};
 use std::fs::File;
+use std::io;
 use std::io::BufReader;
 use zip::ZipArchive;
 
 use crate::data_source::DataSource;
+
+#[derive(Debug, Snafu)]
+pub enum ZipCsvRecordsError {
+    #[snafu(display("IO error at {loc}"))]
+    #[snafu(context(false))]
+    IO {
+        source: io::Error,
+        #[snafu(implicit)]
+        loc: Location,
+    },
+
+    #[snafu(display("Zip error at {loc}"))]
+    #[snafu(context(false))]
+    Zip {
+        source: zip::result::ZipError,
+        #[snafu(implicit)]
+        loc: Location,
+    },
+}
 
 #[derive(Clone, Debug, Builder)]
 pub struct CsvConfig {
@@ -15,7 +35,7 @@ pub struct CsvConfig {
     #[builder(default = "true")]
     pub csv_quoting: bool,
     #[builder(default = "false")]
-    pub eager_panic: bool,
+    pub panic_on_error: bool,
 }
 
 pub struct ZipCsvRecords<T> {
@@ -26,7 +46,11 @@ impl<T> ZipCsvRecords<T>
 where
     T: DeserializeOwned,
 {
-    pub fn new(data_source: &DataSource, config: &CsvConfig, csv_filename: &str) -> Result<Self> {
+    pub fn new(
+        data_source: &DataSource,
+        config: &CsvConfig,
+        csv_filename: &str,
+    ) -> Result<Self, ZipCsvRecordsError> {
         let file = File::open(&data_source.filepath)?;
         let mut archive = ZipArchive::new(file)?;
 
@@ -37,12 +61,11 @@ where
             .flexible(config.csv_flexible)
             .delimiter(b'\t')
             .from_reader(reader);
-        let handle_error = |e| panic!("Should parse {:?}: {e}", data_source.filepath);
         let record_iter = reader
             .into_deserialize()
             .filter_map(|r| {
-                if config.eager_panic {
-                    Some(r.unwrap_or_else(handle_error))
+                if config.panic_on_error {
+                    panic!("Should parse {:?}", data_source.filepath);
                 } else {
                     r.ok()
                 }
