@@ -1,10 +1,8 @@
 use anyhow::Result;
 use secparser_core::{
     downloader::DownloadConfigBuilder,
-    financial_statement::{
-        data_source::FsDataSource, record::FsRecordsConfigBuilder, tag_record::FsTagRecords,
-    },
-    traits::DataSource,
+    financial_statement::{data_source::FsDataSources, tag_record::FsTagRecords},
+    zip_csv_records::CsvConfigBuilder,
 };
 
 fn main() -> Result<()> {
@@ -15,21 +13,13 @@ fn main() -> Result<()> {
         .user_agent(user_agent)
         .download_dir("./download".to_string())
         .build()?;
-    let from_year = 2009;
-    let data_source = FsDataSource::new(&download_config, from_year)?;
-    data_source.validate_cache()?;
-    log::info!("Data source cache is validated");
+    let from_year = 2024;
+    let data_sources = FsDataSources::new(&download_config, from_year)?;
 
-    // Create a config:
-    // strict mode = true, program will panic if parse error occurs
-    let record_config = FsRecordsConfigBuilder::default().build()?;
-
-    // Get a list of tag records
-    let records = FsTagRecords::new(data_source, record_config)?;
-
+    let record_config = CsvConfigBuilder::default().build()?;
+    let records = FsTagRecords::new(data_sources, record_config)?;
     for record in records {
         log::info!("{:?}", record);
-        break;
     }
 
     Ok(())

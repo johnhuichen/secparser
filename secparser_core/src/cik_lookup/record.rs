@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::traits::{FileLines, FileReader};
 
-use super::data_source::CikLookupDataSource;
+use super::data_source::CikLookupDataSources;
 
 #[derive(Debug)]
 pub struct CikLookup {
@@ -33,10 +33,10 @@ pub struct CikLookupRecords {
 impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
-    pub fn new(datasource: CikLookupDataSource) -> Result<Self> {
-        let lines = Self::get_lines(&datasource.lookup_filepath)?;
+    pub fn new(datasource: CikLookupDataSources) -> Result<Self> {
+        let lines = Self::get_lines(&datasource.lookup_ds.filepath)?;
 
-        let contents = fs::read_to_string(&datasource.tickers_exchange_filepath)?;
+        let contents = fs::read_to_string(&datasource.tickers_exchange_ds.filepath)?;
         let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)?;
 
         assert_eq!(
@@ -116,7 +116,7 @@ mod tests {
             .user_agent(user_agent)
             .download_dir("./download".to_string())
             .build()?;
-        let data_source = CikLookupDataSource::new(&download_config)?;
+        let data_source = CikLookupDataSources::new(&download_config)?;
         let records = CikLookupRecords::new(data_source)?;
 
         for r in records {

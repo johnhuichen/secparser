@@ -1,39 +1,25 @@
 use anyhow::Result;
-use std::path::PathBuf;
 
-use crate::downloader::{DownloadConfig, Downloader};
-use crate::traits::DataSource;
+use crate::data_source::DataSource;
+use crate::downloader::DownloadConfig;
 
-pub struct CikLookupDataSource {
-    pub lookup_filepath: PathBuf,
-    pub tickers_exchange_filepath: PathBuf,
+pub struct CikLookupDataSources {
+    pub lookup_ds: DataSource,
+    pub tickers_exchange_ds: DataSource,
 }
 
-impl CikLookupDataSource {
+impl CikLookupDataSources {
     const LOOKUP_URL: &'static str = "https://www.sec.gov/Archives/edgar/cik-lookup-data.txt";
     const TICKERS_EXCHANGE_URL: &'static str =
         "https://www.sec.gov/files/company_tickers_exchange.json";
 
     pub fn new(download_config: &DownloadConfig) -> Result<Self> {
-        let downloader = Downloader::new(download_config.clone());
-        let lookup_filepath = downloader.download(Self::LOOKUP_URL)?;
-        let tickers_exchange_filepath = downloader.download(Self::TICKERS_EXCHANGE_URL)?;
+        let lookup_ds = DataSource::new(download_config, Self::LOOKUP_URL)?;
+        let tickers_exchange_ds = DataSource::new(download_config, Self::TICKERS_EXCHANGE_URL)?;
 
         Ok(Self {
-            lookup_filepath,
-            tickers_exchange_filepath,
+            lookup_ds,
+            tickers_exchange_ds,
         })
-    }
-}
-
-impl DataSource for CikLookupDataSource {
-    fn validate_cache(&self) -> Result<()> {
-        let filepaths = vec![&self.lookup_filepath, &self.tickers_exchange_filepath];
-
-        for filepath in filepaths {
-            Self::validate_non_empty_file(filepath)?;
-        }
-
-        Ok(())
     }
 }

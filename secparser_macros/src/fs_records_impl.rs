@@ -35,37 +35,50 @@ pub fn records_impl_codegen(
 ) -> proc_macro2::TokenStream {
     quote! {
         use anyhow::Result;
-        use crate::financial_statement::data_source::FsDataSource;
-        use crate::financial_statement::record::{FsRecords, FsRecordsConfig, FsRecordsIters, MaybeRecordIter};
+        use std::vec;
+
+        use crate::data_source::DataSource;
+        use crate::financial_statement::data_source::FsDataSources;
+        use crate::zip_csv_records::{CsvConfig, ZipCsvRecords};
+
+        pub type DataSourceIter = vec::IntoIter<DataSource>;
 
         pub struct #records_class {
-            iters: FsRecordsIters<#data_class>,
-            config: FsRecordsConfig,
-        }
-
-        impl FsRecords<#data_class> for #records_class {
-            fn get_iters(&mut self) -> &mut FsRecordsIters<#data_class> {
-                &mut self.iters
-            }
-
-            fn update_iters(&mut self, maybe_record_iter: MaybeRecordIter<#data_class>) {
-                self.iters.maybe_record_iter = maybe_record_iter
-            }
-
-            fn get_config(&self) -> &FsRecordsConfig {
-                &self.config
-            }
-
-            fn get_tsv_filename() -> &'static str {
-                TSV_FILENAME
-            }
+            pub config: CsvConfig,
+            pub data_source_iter: DataSourceIter,
+            pub maybe_records: Option<ZipCsvRecords<#data_class>>,
         }
 
         impl #records_class {
-            pub fn new(data_source: FsDataSource, config: FsRecordsConfig) -> Result<Self> {
-                let iters = Self::init_iters(data_source, &config)?;
+            pub fn new(data_sources: FsDataSources, config: CsvConfig) -> Result<Self> {
+                let data_source_iter = data_sources.vec.into_iter();
 
-                Ok(Self { iters, config })
+                let mut result = Self {
+                    config,
+                    data_source_iter,
+                    maybe_records: None,
+                };
+
+                result.get_maybe_record_iter()?;
+
+                Ok(result)
+            }
+
+            fn get_maybe_record_iter(&mut self) -> Result<()> {
+                match self.data_source_iter.next() {
+                    Some(data_source) => {
+                        let records: ZipCsvRecords<#data_class> =
+                            ZipCsvRecords::new(&data_source, &self.config, TSV_FILENAME)?;
+
+                        self.maybe_records = Some(records);
+
+                        Ok(())
+                    }
+                    None => {
+                        self.maybe_records = None;
+                        Ok(())
+                    },
+                }
             }
         }
 
@@ -73,10 +86,20 @@ pub fn records_impl_codegen(
             type Item = #data_class;
 
             fn next(&mut self) -> Option<Self::Item> {
-                self.do_next()
+                loop {
+                    match &mut self.maybe_records {
+                        Some(record_iter) => match record_iter.next() {
+                            Some(v) => return Some(v),
+                            None => {
+                                self.get_maybe_record_iter()
+                                    .unwrap_or_else(|e| panic!("Should get record iterator: {e}"));
+                            }
+                        },
+                        None => return None,
+                    }
+                }
             }
         }
-
     }
 }
 
@@ -92,16 +115,17 @@ pub fn tests_codegen(
         #[cfg(test)]
         mod tests {
             use anyhow::Result;
-
-            use crate::downloader::DownloadConfigBuilder;
-            use crate::financial_statement::record::FsRecordsConfigBuilder;
-            use crate::traits::DataSource;
+            use crate::{
+                downloader::DownloadConfigBuilder,
+                zip_csv_records::CsvConfigBuilder,
+            };
 
             use super::*;
 
             #[test]
             fn #test_fn() -> Result<()> {
                 env_logger::builder()
+                    .is_test(true)
                     .try_init()
                     .unwrap_or_default();
 
@@ -110,16 +134,13 @@ pub fn tests_codegen(
                     .user_agent(user_agent)
                     .download_dir("./download".to_string())
                     .build()?;
-
                 let from_year = 2024;
-                let data_source = FsDataSource::new(&download_config, from_year)?;
-                data_source.validate_cache()?;
+                let data_sources = FsDataSources::new(&download_config, from_year)?;
 
-                let record_config = FsRecordsConfigBuilder::default().eager_panic(true).build()?;
-                let records = #records_class::new(data_source, record_config)?;
-
+                let record_config = CsvConfigBuilder::default().build()?;
+                let records = #records_class::new(data_sources, record_config)?;
                 for record in records {
-                    log::debug!("{:?}", record);
+                    log::info!("{:?}", record);
                 }
 
                 Ok(())

@@ -1,8 +1,7 @@
 use anyhow::Result;
 use secparser_core::{
-    cik_lookup::{data_source::CikLookupDataSource, record::CikLookupRecords},
+    cik_lookup::{data_source::CikLookupDataSources, record::CikLookupRecords},
     downloader::DownloadConfigBuilder,
-    traits::DataSource,
 };
 
 fn main() -> Result<()> {
@@ -14,15 +13,11 @@ fn main() -> Result<()> {
         .download_dir("./download".to_string())
         .build()?;
 
-    let data_source = CikLookupDataSource::new(&download_config)?;
-    data_source.validate_cache()?;
-    log::info!("Data source cache is validated");
-
+    let data_source = CikLookupDataSources::new(&download_config)?;
     let records = CikLookupRecords::new(data_source)?;
 
     for r in records {
         log::info!("{r:?}");
-        break;
     }
 
     Ok(())

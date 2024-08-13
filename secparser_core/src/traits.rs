@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use encoding_rs::UTF_8;
 use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
 use std::fs::File;
@@ -17,26 +17,5 @@ pub trait FileReader {
         );
 
         Ok(reader.lines())
-    }
-}
-
-pub trait DataSource {
-    fn validate_cache(&self) -> Result<()>;
-
-    fn validate_non_empty_file(filepath: &PathBuf) -> Result<()> {
-        if !filepath.exists() {
-            return Err(Error::msg(format!("Should have {filepath:?}")));
-        }
-
-        let file = File::open(filepath)?;
-        let file_size = file.metadata()?.len();
-
-        if file_size == 0 {
-            return Err(Error::msg(format!(
-                "Should have non empty file {filepath:?}"
-            )));
-        }
-
-        Ok(())
     }
 }
