@@ -19,7 +19,7 @@ fn main() -> Result<(), Whatever> {
     let data_sources = FsDataSources::new(&download_config, from_year)?;
 
     let record_config = CsvConfigBuilder::default()
-        .error_on_parse_failure(true)
+        .panic_on_error(true)
         .build()
         .whatever_context("Failed to build csv config")?;
     let records = FsTagRecords::new(data_sources, record_config)

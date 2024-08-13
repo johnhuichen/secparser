@@ -1,5 +1,4 @@
 pub mod cik_lookup;
-pub mod company_facts;
 pub mod data_source;
 pub mod downloader;
 pub mod financial_statements;

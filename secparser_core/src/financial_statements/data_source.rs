@@ -1,7 +1,6 @@
 use chrono::{Datelike, Months, NaiveDate, Utc};
-use snafu::Whatever;
 
-use crate::data_source::DataSource;
+use crate::data_source::{DataSource, DataSourceError};
 use crate::downloader::DownloadConfig;
 
 pub struct FsDataSources {
@@ -9,11 +8,11 @@ pub struct FsDataSources {
 }
 
 impl FsDataSources {
-    pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self, Whatever> {
+    pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self, DataSourceError> {
         let data_sources = Self::get_urls(from_year)
             .into_iter()
-            .map(|url| DataSource::new(download_config, &url).unwrap())
-            .collect::<Vec<DataSource>>();
+            .map(|url| DataSource::new(download_config, &url))
+            .collect::<Result<Vec<DataSource>, DataSourceError>>()?;
 
         Ok(FsDataSources { vec: data_sources })
     }
