@@ -1,12 +1,31 @@
-use anyhow::Result;
 use std::collections::HashMap;
 use std::fs::{self};
+use std::io;
+use std::path::PathBuf;
 
 use serde::Deserialize;
+use snafu::{Location, ResultExt, Snafu};
 
 use crate::traits::{FileLines, FileReader};
 
 use super::data_source::CikLookupDataSources;
+
+#[derive(Debug, Snafu)]
+pub enum CikLookupRecordsError {
+    #[snafu(display("IO error at {loc}"))]
+    #[snafu(context(false))]
+    IO {
+        source: io::Error,
+        #[snafu(implicit)]
+        loc: Location,
+    },
+
+    #[snafu(display("Failed to deserialize {filepath:?}"))]
+    Deserialize {
+        source: serde_json::Error,
+        filepath: PathBuf,
+    },
+}
 
 #[derive(Debug)]
 pub struct CikLookup {
@@ -33,11 +52,14 @@ pub struct CikLookupRecords {
 impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
-    pub fn new(datasource: CikLookupDataSources) -> Result<Self> {
+    pub fn new(datasource: CikLookupDataSources) -> Result<Self, CikLookupRecordsError> {
         let lines = Self::get_lines(&datasource.lookup_ds.filepath)?;
 
         let contents = fs::read_to_string(&datasource.tickers_exchange_ds.filepath)?;
-        let tickers_exchange: TickersExchangeData = serde_json::from_str(&contents)?;
+        let tickers_exchange: TickersExchangeData =
+            serde_json::from_str(&contents).context(DeserializeSnafu {
+                filepath: &datasource.tickers_exchange_ds.filepath,
+            })?;
 
         assert_eq!(
             tickers_exchange.fields,
@@ -99,13 +121,14 @@ impl Iterator for CikLookupRecords {
 
 #[cfg(test)]
 mod tests {
+    use snafu::{ResultExt, Whatever};
+
     use crate::downloader::DownloadConfigBuilder;
-    use anyhow::Result;
 
     use super::*;
 
     #[test]
-    fn it_parses_cik_lookup() -> Result<()> {
+    fn it_parses_cik_lookup() -> Result<(), Whatever> {
         env_logger::builder()
             .is_test(true)
             .try_init()
@@ -115,9 +138,12 @@ mod tests {
         let download_config = DownloadConfigBuilder::default()
             .user_agent(user_agent)
             .download_dir("./download".to_string())
-            .build()?;
-        let data_source = CikLookupDataSources::new(&download_config)?;
-        let records = CikLookupRecords::new(data_source)?;
+            .build()
+            .whatever_context("Failed to build config")?;
+        let data_source = CikLookupDataSources::new(&download_config)
+            .whatever_context("Failed to get data source")?;
+        let records =
+            CikLookupRecords::new(data_source).whatever_context("Failed to create records")?;
 
         for r in records {
             log::debug!("{r:?}");

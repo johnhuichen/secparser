@@ -1,6 +1,4 @@
-use anyhow::Result;
-
-use crate::data_source::DataSource;
+use crate::data_source::{DataSource, DataSourceError};
 use crate::downloader::DownloadConfig;
 
 pub struct CikLookupDataSources {
@@ -13,7 +11,7 @@ impl CikLookupDataSources {
     const TICKERS_EXCHANGE_URL: &'static str =
         "https://www.sec.gov/files/company_tickers_exchange.json";
 
-    pub fn new(download_config: &DownloadConfig) -> Result<Self> {
+    pub fn new(download_config: &DownloadConfig) -> Result<Self, DataSourceError> {
         let lookup_ds = DataSource::new(download_config, Self::LOOKUP_URL)?;
         let tickers_exchange_ds = DataSource::new(download_config, Self::TICKERS_EXCHANGE_URL)?;
 

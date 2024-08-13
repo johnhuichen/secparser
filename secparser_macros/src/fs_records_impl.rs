@@ -34,12 +34,11 @@ pub fn records_impl_codegen(
     records_class: &proc_macro2::Ident,
 ) -> proc_macro2::TokenStream {
     quote! {
-        use anyhow::Result;
         use std::vec;
 
         use crate::data_source::DataSource;
-        use crate::financial_statement::data_source::FsDataSources;
-        use crate::zip_csv_records::{CsvConfig, ZipCsvRecords};
+        use crate::financial_statements::data_source::FsDataSources;
+        use crate::zip_csv_records::{CsvConfig, ZipCsvRecords, ZipCsvRecordsError};
 
         pub type DataSourceIter = vec::IntoIter<DataSource>;
 
@@ -50,7 +49,7 @@ pub fn records_impl_codegen(
         }
 
         impl #records_class {
-            pub fn new(data_sources: FsDataSources, config: CsvConfig) -> Result<Self> {
+            pub fn new(data_sources: FsDataSources, config: CsvConfig) -> Result<Self, ZipCsvRecordsError> {
                 let data_source_iter = data_sources.vec.into_iter();
 
                 let mut result = Self {
@@ -64,7 +63,7 @@ pub fn records_impl_codegen(
                 Ok(result)
             }
 
-            fn get_maybe_record_iter(&mut self) -> Result<()> {
+            fn get_maybe_record_iter(&mut self) -> Result<(), ZipCsvRecordsError> {
                 match self.data_source_iter.next() {
                     Some(data_source) => {
                         let records: ZipCsvRecords<#data_class> =
@@ -114,18 +113,18 @@ pub fn tests_codegen(
     quote! {
         #[cfg(test)]
         mod tests {
-            use anyhow::Result;
             use crate::{
                 downloader::DownloadConfigBuilder,
                 zip_csv_records::CsvConfigBuilder,
             };
+            use snafu::{ResultExt, Whatever};
 
             use super::*;
 
             #[test]
-            fn #test_fn() -> Result<()> {
+            fn #test_fn() -> Result<(), Whatever> {
                 env_logger::builder()
-                    .is_test(true)
+                    // .is_test(true)
                     .try_init()
                     .unwrap_or_default();
 
@@ -133,12 +132,17 @@ pub fn tests_codegen(
                 let download_config = DownloadConfigBuilder::default()
                     .user_agent(user_agent)
                     .download_dir("./download".to_string())
-                    .build()?;
+                    .build()
+                    .whatever_context("Failed to build config")?;
                 let from_year = 2024;
                 let data_sources = FsDataSources::new(&download_config, from_year)?;
 
-                let record_config = CsvConfigBuilder::default().build()?;
-                let records = #records_class::new(data_sources, record_config)?;
+                let record_config = CsvConfigBuilder::default()
+                    .panic_on_error(true)
+                    .build()
+                    .whatever_context("Failed to build csv config")?;
+                let records = #records_class::new(data_sources, record_config)
+                    .whatever_context("Failed to parse records")?;
                 for record in records {
                     log::info!("{:?}", record);
                 }

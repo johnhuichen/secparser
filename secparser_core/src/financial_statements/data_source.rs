@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use chrono::{Datelike, Months, NaiveDate, Utc};
+use snafu::Whatever;
 
 use crate::data_source::DataSource;
 use crate::downloader::DownloadConfig;
@@ -10,7 +9,7 @@ pub struct FsDataSources {
 }
 
 impl FsDataSources {
-    pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self> {
+    pub fn new(download_config: &DownloadConfig, from_year: i32) -> Result<Self, Whatever> {
         let data_sources = Self::get_urls(from_year)
             .into_iter()
             .map(|url| DataSource::new(download_config, &url).unwrap())
