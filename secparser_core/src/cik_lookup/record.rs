@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::fs::{self};
-use std::io;
+use std::fs::File;
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -55,9 +55,10 @@ impl CikLookupRecords {
     pub fn new(datasource: CikLookupDataSources) -> Result<Self, CikLookupRecordsError> {
         let lines = Self::get_lines(&datasource.lookup_ds.filepath)?;
 
-        let contents = fs::read_to_string(&datasource.tickers_exchange_ds.filepath)?;
+        let file = File::open(&datasource.tickers_exchange_ds.filepath)?;
+        let reader = BufReader::new(file);
         let tickers_exchange: TickersExchangeData =
-            serde_json::from_str(&contents).context(DeserializeSnafu {
+            serde_json::from_reader(reader).context(DeserializeSnafu {
                 filepath: &datasource.tickers_exchange_ds.filepath,
             })?;
 

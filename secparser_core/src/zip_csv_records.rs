@@ -49,13 +49,13 @@ where
     pub fn new(
         data_source: &DataSource,
         config: &CsvConfig,
-        csv_filename: &str,
+        csv_file: &str,
     ) -> Result<Self, ZipCsvRecordsError> {
-        let file = File::open(&data_source.filepath)?;
-        let mut archive = ZipArchive::new(file)?;
+        let zip_file = File::open(&data_source.filepath)?;
+        let mut archive = ZipArchive::new(zip_file)?;
 
-        let tag_file = archive.by_name(csv_filename)?;
-        let reader = BufReader::new(tag_file);
+        let file = archive.by_name(csv_file)?;
+        let reader = BufReader::new(file);
         let reader = ReaderBuilder::new()
             .quoting(config.csv_quoting)
             .flexible(config.csv_flexible)
