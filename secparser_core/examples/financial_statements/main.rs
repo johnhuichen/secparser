@@ -16,7 +16,8 @@ fn main() -> Result<(), Whatever> {
         .build()
         .whatever_context("Failed to build download config")?;
     let from_year = 2024;
-    let data_sources = FsDataSources::new(&download_config, from_year)?;
+    let data_sources = FsDataSources::new(&download_config, from_year)
+        .whatever_context("Failed to get data source")?;
 
     let record_config = CsvConfigBuilder::default()
         .panic_on_error(true)
