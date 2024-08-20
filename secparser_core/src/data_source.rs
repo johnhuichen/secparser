@@ -8,7 +8,7 @@ use crate::downloader::{DownloadConfig, Downloader, DownloaderError};
 
 #[derive(Debug, Snafu)]
 pub enum DataSourceError {
-    #[snafu(display("Cannot download"))]
+    #[snafu(display("Failed to download"))]
     Downloader { source: DownloaderError },
 }
 

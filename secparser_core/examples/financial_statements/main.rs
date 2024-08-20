@@ -23,7 +23,7 @@ fn main() -> Result<(), Whatever> {
         .panic_on_error(true)
         .build()
         .whatever_context("Failed to build csv config")?;
-    let records = FsTagRecords::new(data_sources, record_config)
+    let records = FsTagRecords::new(&data_sources, record_config)
         .whatever_context("Failed to parse records")?;
     for record in records {
         log::info!("{:?}", record);

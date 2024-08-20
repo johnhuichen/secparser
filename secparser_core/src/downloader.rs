@@ -27,13 +27,13 @@ pub enum DownloaderError {
         loc: Location,
     },
 
-    #[snafu(display("Cannot get file path for url {url}"))]
+    #[snafu(display("Failed to get file path for url {url}"))]
     GetFilePath {
         source: GetFilePathError,
         url: String,
     },
 
-    #[snafu(display("Cannot download url {url}"))]
+    #[snafu(display("Failed to download url {url}"))]
     DownloadAndSave {
         source: retry::Error<DownloadAndSaveError>,
         url: String,

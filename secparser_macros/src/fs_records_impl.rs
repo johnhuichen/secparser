@@ -49,8 +49,8 @@ pub fn records_impl_codegen(
         }
 
         impl #records_class {
-            pub fn new(data_sources: FsDataSources, config: CsvConfig) -> Result<Self, ZipCsvRecordsError> {
-                let data_source_iter = data_sources.vec.into_iter();
+            pub fn new(data_sources: &FsDataSources, config: CsvConfig) -> Result<Self, ZipCsvRecordsError> {
+                let data_source_iter = data_sources.vec.clone().into_iter();
 
                 let mut result = Self {
                     config,
@@ -142,7 +142,7 @@ pub fn tests_codegen(
                     .panic_on_error(true)
                     .build()
                     .whatever_context("Failed to build csv config")?;
-                let records = #records_class::new(data_sources, record_config)
+                let records = #records_class::new(&data_sources, record_config)
                     .whatever_context("Failed to parse records")?;
                 for record in records {
                     log::info!("{:?}", record);

@@ -52,7 +52,7 @@ pub struct CikLookupRecords {
 impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
-    pub fn new(datasource: CikLookupDataSources) -> Result<Self, CikLookupRecordsError> {
+    pub fn new(datasource: &CikLookupDataSources) -> Result<Self, CikLookupRecordsError> {
         let lines = Self::get_lines(&datasource.lookup_ds.filepath)?;
 
         let file = File::open(&datasource.tickers_exchange_ds.filepath)?;
@@ -144,7 +144,7 @@ mod tests {
         let data_source = CikLookupDataSources::new(&download_config)
             .whatever_context("Failed to get data source")?;
         let records =
-            CikLookupRecords::new(data_source).whatever_context("Failed to create records")?;
+            CikLookupRecords::new(&data_source).whatever_context("Failed to create records")?;
 
         for r in records {
             log::debug!("{r:?}");

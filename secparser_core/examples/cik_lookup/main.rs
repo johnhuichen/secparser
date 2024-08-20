@@ -16,7 +16,7 @@ fn main() -> Result<(), Whatever> {
 
     let data_source = CikLookupDataSources::new(&download_config)
         .whatever_context("Failed to get data source")?;
-    let records = CikLookupRecords::new(data_source).whatever_context("Failed to get records")?;
+    let records = CikLookupRecords::new(&data_source).whatever_context("Failed to get records")?;
 
     for r in records {
         log::info!("{r:?}");
