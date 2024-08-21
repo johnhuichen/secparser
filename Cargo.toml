@@ -1,5 +1,5 @@
 [workspace]
-members = ["secparser_core", "secparser_macros"]
+members = ["secparser_core", "secparser_macros", "secparser_ingest"]
 resolver = "2"
 
 [workspace.package]
