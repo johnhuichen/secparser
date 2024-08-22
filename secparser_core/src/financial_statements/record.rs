@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+use snafu::{ResultExt, Snafu, Whatever};
 use std::fmt::Debug;
 use std::vec;
 
@@ -5,8 +7,6 @@ use crate::data_source::{DataSource, DataSourceError};
 use crate::downloader::{DownloadConfig, DownloadConfigBuilder};
 use crate::financial_statements::data_source::FsDataSources;
 use crate::zip_csv_records::{CsvConfig, CsvConfigBuilder, ZipCsvRecords, ZipCsvRecordsError};
-use serde::de::DeserializeOwned;
-use snafu::{ResultExt, Snafu, Whatever};
 
 #[derive(Debug, Snafu)]
 pub enum FsRecordsError {
@@ -17,11 +17,15 @@ pub enum FsRecordsError {
     DataSource { source: DataSourceError },
 }
 
+pub trait FsRecord {
+    fn csv_filename() -> String;
+}
+
 pub type DataSourceIter = vec::IntoIter<DataSource>;
 
 pub struct FsRecords<T>
 where
-    T: DeserializeOwned,
+    T: DeserializeOwned + FsRecord,
 {
     pub config: CsvConfig,
     pub data_source_iter: DataSourceIter,
@@ -31,23 +35,22 @@ where
 
 impl<T> FsRecords<T>
 where
-    T: DeserializeOwned,
+    T: DeserializeOwned + FsRecord,
 {
     pub fn new(
         download_config: &DownloadConfig,
-        config: CsvConfig,
+        csv_config: CsvConfig,
         from_year: i32,
-        csv_filename: &str,
     ) -> Result<Self, FsRecordsError> {
         let data_sources =
             FsDataSources::new(download_config, from_year).context(DataSourceSnafu)?;
         let data_source_iter = data_sources.vec.clone().into_iter();
 
         let mut result = Self {
-            config,
+            config: csv_config,
             data_source_iter,
             maybe_records: None,
-            csv_filename: csv_filename.to_string(),
+            csv_filename: T::csv_filename(),
         };
 
         result.get_maybe_record_iter().context(ZipCsvSnafu)?;
@@ -58,7 +61,11 @@ where
     fn get_maybe_record_iter(&mut self) -> Result<(), ZipCsvRecordsError> {
         match self.data_source_iter.next() {
             Some(data_source) => {
-                log::info!("Processing {:?}", data_source.filepath);
+                log::info!(
+                    "Processing {:?}/{}",
+                    data_source.filepath,
+                    self.csv_filename
+                );
                 let records: ZipCsvRecords<T> =
                     ZipCsvRecords::new(&data_source, &self.config, &self.csv_filename)?;
 
@@ -76,7 +83,7 @@ where
 
 impl<T> Iterator for FsRecords<T>
 where
-    T: DeserializeOwned,
+    T: DeserializeOwned + FsRecord,
 {
     type Item = T;
 
@@ -96,21 +103,9 @@ where
     }
 }
 
-pub trait FsService<T>
+pub fn test_fs_records<T>() -> Result<(), Whatever>
 where
-    T: DeserializeOwned,
-{
-    fn get_records(
-        download_config: &DownloadConfig,
-        config: CsvConfig,
-        from_year: i32,
-    ) -> Result<FsRecords<T>, FsRecordsError>;
-}
-
-pub fn test_fs_records<R, T>() -> Result<(), Whatever>
-where
-    R: FsService<T>,
-    T: DeserializeOwned + Debug,
+    T: DeserializeOwned + Debug + FsRecord,
 {
     env_logger::builder()
         // .is_test(true)
@@ -123,13 +118,13 @@ where
         .download_dir("./download".to_string())
         .build()
         .whatever_context("Failed to build config")?;
-    let record_config = CsvConfigBuilder::default()
+    let csv_config = CsvConfigBuilder::default()
         .panic_on_error(true)
         .build()
         .whatever_context("Failed to build csv config")?;
     let from_year = 2024;
 
-    let records = R::get_records(&download_config, record_config, from_year)
+    let records: FsRecords<T> = FsRecords::new(&download_config, csv_config, from_year)
         .whatever_context("Failed to parse records")?;
     for record in records {
         log::info!("{:?}", record);

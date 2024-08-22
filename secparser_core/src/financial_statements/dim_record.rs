@@ -1,9 +1,6 @@
 use serde::Deserialize;
 
-use crate::downloader::DownloadConfig;
-use crate::zip_csv_records::CsvConfig;
-
-use super::record::{FsRecords, FsRecordsError, FsService};
+use super::record::FsRecord;
 
 #[derive(Debug, Deserialize)]
 pub struct FsDim {
@@ -12,15 +9,9 @@ pub struct FsDim {
     pub segt: Option<u8>,
 }
 
-pub struct FsDimService {}
-
-impl FsService<FsDim> for FsDimService {
-    fn get_records(
-        download_config: &DownloadConfig,
-        config: CsvConfig,
-        from_year: i32,
-    ) -> Result<FsRecords<FsDim>, FsRecordsError> {
-        FsRecords::new(download_config, config, from_year, "dim.tsv")
+impl FsRecord for FsDim {
+    fn csv_filename() -> String {
+        "dim.tsv".to_string()
     }
 }
 
@@ -33,6 +24,6 @@ mod tests {
 
     #[test]
     fn it_parses_fs_dim() -> Result<(), Whatever> {
-        test_fs_records::<FsDimService, FsDim>()
+        test_fs_records::<FsDim>()
     }
 }
