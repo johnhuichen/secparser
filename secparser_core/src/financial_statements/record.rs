@@ -1,11 +1,21 @@
+use std::fmt::Debug;
 use std::vec;
 
 use crate::data_source::{DataSource, DataSourceError};
-use crate::downloader::DownloadConfig;
+use crate::downloader::{DownloadConfig, DownloadConfigBuilder};
 use crate::financial_statements::data_source::FsDataSources;
-use crate::zip_csv_records::{CsvConfig, ZipCsvRecords, ZipCsvRecordsError};
+use crate::zip_csv_records::{CsvConfig, CsvConfigBuilder, ZipCsvRecords, ZipCsvRecordsError};
 use serde::de::DeserializeOwned;
-use snafu::{ResultExt, Snafu};
+use snafu::{ResultExt, Snafu, Whatever};
+
+#[derive(Debug, Snafu)]
+pub enum FsRecordsError {
+    #[snafu(display("Failed to process csv"))]
+    ZipCsv { source: ZipCsvRecordsError },
+
+    #[snafu(display("Failed to get data source"))]
+    DataSource { source: DataSourceError },
+}
 
 pub type DataSourceIter = vec::IntoIter<DataSource>;
 
@@ -17,15 +27,6 @@ where
     pub data_source_iter: DataSourceIter,
     pub maybe_records: Option<ZipCsvRecords<T>>,
     pub csv_filename: String,
-}
-
-#[derive(Debug, Snafu)]
-pub enum FsRecordsError {
-    #[snafu(display("Failed to process csv"))]
-    ZipCsv { source: ZipCsvRecordsError },
-
-    #[snafu(display("Failed to get data source"))]
-    DataSource { source: DataSourceError },
 }
 
 impl<T> FsRecords<T>
@@ -92,4 +93,46 @@ where
             }
         }
     }
+}
+
+pub trait FsRecord<T>
+where
+    T: DeserializeOwned,
+{
+    fn get_records(
+        download_config: &DownloadConfig,
+        config: CsvConfig,
+        from_year: i32,
+    ) -> Result<FsRecords<T>, FsRecordsError>;
+}
+
+pub fn test_fs_records<R, T>() -> Result<(), Whatever>
+where
+    R: FsRecord<T>,
+    T: DeserializeOwned + Debug,
+{
+    env_logger::builder()
+        // .is_test(true)
+        .try_init()
+        .unwrap_or_default();
+
+    let user_agent = "example@secparser.com".to_string();
+    let download_config = DownloadConfigBuilder::default()
+        .user_agent(user_agent)
+        .download_dir("./download".to_string())
+        .build()
+        .whatever_context("Failed to build config")?;
+    let record_config = CsvConfigBuilder::default()
+        .panic_on_error(true)
+        .build()
+        .whatever_context("Failed to build csv config")?;
+    let from_year = 2024;
+
+    let records = R::get_records(&download_config, record_config, from_year)
+        .whatever_context("Failed to parse records")?;
+    for record in records {
+        log::info!("{:?}", record);
+    }
+
+    Ok(())
 }
