@@ -1,9 +1,6 @@
 use serde::Deserialize;
 
-use crate::downloader::DownloadConfig;
-use crate::zip_csv_records::CsvConfig;
-
-use super::record::{FsRecords, FsRecordsError, FsService};
+use super::record::FsRecord;
 
 #[derive(Debug, Deserialize)]
 pub struct FsPre {
@@ -19,15 +16,9 @@ pub struct FsPre {
     pub negating: Option<u8>,
 }
 
-pub struct FsPreService {}
-
-impl FsService<FsPre> for FsPreService {
-    fn get_records(
-        download_config: &DownloadConfig,
-        config: CsvConfig,
-        from_year: i32,
-    ) -> Result<FsRecords<FsPre>, FsRecordsError> {
-        FsRecords::new(download_config, config, from_year, "pre.tsv")
+impl FsRecord for FsPre {
+    fn csv_filename() -> String {
+        "pre.tsv".to_string()
     }
 }
 
@@ -40,6 +31,6 @@ mod tests {
 
     #[test]
     fn it_parses_fs_pre() -> Result<(), Whatever> {
-        test_fs_records::<FsPreService, FsPre>()
+        test_fs_records::<FsPre>()
     }
 }

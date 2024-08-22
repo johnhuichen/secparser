@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-snafu = "0.8.4"
-
 postgres = "0.19.8"
 indicatif = "0.17.8"
 inquire = "0.7.5"
 
 log = { workspace = true }
 env_logger = { workspace = true }
+snafu = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
 secparser_core = { workspace = true }

@@ -24,7 +24,10 @@ fn main() -> Result<(), Whatever> {
             cik_lookup::ingest_cik_lookup().whatever_context("Failed to ingest cik lookup")?;
         } else if ans == financial_statements_opt {
             financial_statements::sub::ingest_fs_sub()
-                .whatever_context("Failed to ingest financial statements")?;
+                .whatever_context("Failed to ingest fs sub")?;
+
+            financial_statements::tag::ingest_fs_tag()
+                .whatever_context("Failed to ingest fs tag")?;
         } else if ans == exit_opt {
             break;
         }

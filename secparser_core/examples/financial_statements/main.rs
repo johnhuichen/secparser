@@ -1,5 +1,5 @@
-use secparser_core::financial_statements::record::FsService;
-use secparser_core::financial_statements::sub_record::FsSubService;
+use secparser_core::financial_statements::record::FsRecords;
+use secparser_core::financial_statements::sub_record::FsSub;
 use secparser_core::{downloader::DownloadConfigBuilder, zip_csv_records::CsvConfigBuilder};
 use snafu::{ResultExt, Whatever};
 
@@ -14,12 +14,12 @@ fn main() -> Result<(), Whatever> {
         .build()
         .whatever_context("Failed to build download config")?;
 
-    let record_config = CsvConfigBuilder::default()
+    let csv_config = CsvConfigBuilder::default()
         .panic_on_error(true)
         .build()
         .whatever_context("Failed to build csv config")?;
     let from_year = 2024;
-    let records = FsSubService::get_records(&download_config, record_config, from_year)
+    let records: FsRecords<FsSub> = FsRecords::new(&download_config, csv_config, from_year)
         .whatever_context("Failed to parse records")?;
     for record in records {
         log::info!("{:?}", record);

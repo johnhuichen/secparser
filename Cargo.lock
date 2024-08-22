@@ -1678,6 +1678,8 @@ dependencies = [
  "log",
  "postgres",
  "secparser_core",
+ "serde",
+ "serde_json",
  "snafu",
 ]
 

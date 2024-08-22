@@ -16,12 +16,12 @@ encoding_rs = "0.8.34"
 encoding_rs_io = "0.1.7"
 reqwest = {version = "0.12.5", features = ["gzip", "deflate", "blocking"]}
 retry = "2.0.0"
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.121"
 zip = "2.1.6"
+url = "2.5.2"
 
 colored = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
-snafu = "0.8.4"
-url = "2.5.2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+snafu = { workspace = true }
