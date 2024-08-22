@@ -20,14 +20,16 @@ pub fn ingest_cik_lookup() -> Result<(), Whatever> {
 
     for r in records {
         bar.inc_with_msg(1, &r.name);
-        insert_cik_lookup(&mut db, r).whatever_context("Failed to insert record")?;
+        if let Err(e) = insert_cik_lookup(&mut db, &r) {
+            log::error!("Failed to insert {r:?}: {e}");
+        }
     }
     bar.finish();
 
     Ok(())
 }
 
-fn insert_cik_lookup(db: &mut PostgresDB, record: CikLookup) -> Result<(), postgres::Error> {
+fn insert_cik_lookup(db: &mut PostgresDB, record: &CikLookup) -> Result<(), postgres::Error> {
     db.client.execute(
         "INSERT INTO cik_lookup AS t
 (cik, name, ticker, exchange)
