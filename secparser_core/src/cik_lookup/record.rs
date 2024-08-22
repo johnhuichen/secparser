@@ -50,6 +50,7 @@ struct TickersExchangeData {
 }
 
 pub struct CikLookupRecords {
+    pub count: usize,
     lines: FileLines,
     tickers_exchange: HashMap<usize, (Option<String>, Option<String>)>,
 }
@@ -60,6 +61,7 @@ impl CikLookupRecords {
     pub fn new(download_config: &DownloadConfig) -> Result<Self, CikLookupRecordsError> {
         let data_source = CikLookupDataSources::new(download_config).context(DataSourceSnafu)?;
         let lines = Self::get_lines(&data_source.lookup_ds.filepath)?;
+        let count = Self::get_lines(&data_source.lookup_ds.filepath)?.count();
 
         let file = File::open(&data_source.tickers_exchange_ds.filepath)?;
         let reader = BufReader::new(file);
@@ -81,6 +83,7 @@ impl CikLookupRecords {
 
         Ok(Self {
             lines,
+            count,
             tickers_exchange,
         })
     }

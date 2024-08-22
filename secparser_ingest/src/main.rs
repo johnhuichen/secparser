@@ -4,6 +4,7 @@ use snafu::{ResultExt, Whatever};
 mod cik_lookup;
 mod db;
 mod financial_statements;
+mod progress_bar;
 
 #[snafu::report]
 fn main() -> Result<(), Whatever> {

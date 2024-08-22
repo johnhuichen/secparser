@@ -1,11 +1,10 @@
-use indicatif::{ProgressBar, ProgressStyle};
 use secparser_core::{
     cik_lookup::record::{CikLookup, CikLookupRecords},
     downloader::DownloadConfigBuilder,
 };
 use snafu::{ResultExt, Whatever};
 
-use crate::db::PostgresDB;
+use crate::{db::PostgresDB, progress_bar::CustomProgressBar};
 
 pub fn ingest_cik_lookup() -> Result<(), Whatever> {
     let user_agent = "example@secparser.com".to_string();
@@ -16,22 +15,12 @@ pub fn ingest_cik_lookup() -> Result<(), Whatever> {
 
     let records =
         CikLookupRecords::new(&download_config).whatever_context("Failed to get records")?;
-
-    let bar = ProgressBar::new(records.count() as u64);
-    bar.set_style(
-        ProgressStyle::with_template("[{eta_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
-            .unwrap()
-            .progress_chars("##-"),
-    );
-
-    let records =
-        CikLookupRecords::new(&download_config).whatever_context("Failed to get records")?;
     let mut db = PostgresDB::new().whatever_context("Failed to get a db client")?;
+    let bar = CustomProgressBar::new(records.count);
 
     for r in records {
-        bar.set_message(r.name.to_string());
+        bar.inc_with_msg(1, &r.name);
         insert_cik_lookup(&mut db, r).whatever_context("Failed to insert record")?;
-        bar.inc(1);
     }
     bar.finish();
 

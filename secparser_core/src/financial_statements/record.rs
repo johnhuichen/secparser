@@ -58,6 +58,7 @@ where
     fn get_maybe_record_iter(&mut self) -> Result<(), ZipCsvRecordsError> {
         match self.data_source_iter.next() {
             Some(data_source) => {
+                log::info!("Processing {:?}", data_source.filepath);
                 let records: ZipCsvRecords<T> =
                     ZipCsvRecords::new(&data_source, &self.config, &self.csv_filename)?;
 
