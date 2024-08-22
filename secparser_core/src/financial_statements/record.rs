@@ -95,7 +95,7 @@ where
     }
 }
 
-pub trait FsRecord<T>
+pub trait FsService<T>
 where
     T: DeserializeOwned,
 {
@@ -108,7 +108,7 @@ where
 
 pub fn test_fs_records<R, T>() -> Result<(), Whatever>
 where
-    R: FsRecord<T>,
+    R: FsService<T>,
     T: DeserializeOwned + Debug,
 {
     env_logger::builder()

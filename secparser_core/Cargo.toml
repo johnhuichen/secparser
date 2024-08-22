@@ -23,6 +23,5 @@ zip = "2.1.6"
 colored = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
-secparser_macros = { workspace = true }
 snafu = "0.8.4"
 url = "2.5.2"

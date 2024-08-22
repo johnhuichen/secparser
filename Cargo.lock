@@ -1695,21 +1695,11 @@ dependencies = [
  "log",
  "reqwest",
  "retry",
- "secparser_macros",
  "serde",
  "serde_json",
  "snafu",
  "url",
  "zip",
-]
-
-[[package]]
-name = "secparser_macros"
-version = "0.0.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

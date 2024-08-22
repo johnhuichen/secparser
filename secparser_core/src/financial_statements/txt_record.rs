@@ -1,9 +1,11 @@
-use secparser_macros::FsRecordsImpl;
 use serde::Deserialize;
 
-const TSV_FILENAME: &str = "txt.tsv";
+use crate::downloader::DownloadConfig;
+use crate::zip_csv_records::CsvConfig;
 
-#[derive(Debug, Deserialize, FsRecordsImpl)]
+use super::record::{FsRecords, FsRecordsError, FsService};
+
+#[derive(Debug, Deserialize)]
 pub struct FsTxt {
     pub adsh: String,
     pub tag: String,
@@ -25,4 +27,29 @@ pub struct FsTxt {
     pub footlen: Option<u32>,
     pub context: String,
     pub value: String,
+}
+
+pub struct FsTxtService {}
+
+impl FsService<FsTxt> for FsTxtService {
+    fn get_records(
+        download_config: &DownloadConfig,
+        config: CsvConfig,
+        from_year: i32,
+    ) -> Result<FsRecords<FsTxt>, FsRecordsError> {
+        FsRecords::new(download_config, config, from_year, "txt.tsv")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::financial_statements::record::test_fs_records;
+    use snafu::Whatever;
+
+    use super::*;
+
+    #[test]
+    fn it_parses_fs_txt() -> Result<(), Whatever> {
+        test_fs_records::<FsTxtService, FsTxt>()
+    }
 }
