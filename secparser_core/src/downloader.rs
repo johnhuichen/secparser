@@ -76,7 +76,7 @@ pub enum DownloadAndSaveError {
 pub struct DownloadConfig {
     pub user_agent: String,
 
-    #[builder(default = "String::from(\"/tmp/secparser\")")]
+    #[builder(default = "String::from(\"./download\")")]
     pub download_dir: String,
 
     #[builder(default = "true")]

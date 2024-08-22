@@ -1,9 +1,6 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use secparser_core::{
-    cik_lookup::{
-        data_source::CikLookupDataSources,
-        record::{CikLookup, CikLookupRecords},
-    },
+    cik_lookup::record::{CikLookup, CikLookupRecords},
     downloader::DownloadConfigBuilder,
 };
 use snafu::{ResultExt, Whatever};
@@ -14,14 +11,11 @@ pub fn ingest_cik_lookup() -> Result<(), Whatever> {
     let user_agent = "example@secparser.com".to_string();
     let download_config = DownloadConfigBuilder::default()
         .user_agent(user_agent)
-        .download_dir("./download".to_string())
         .build()
         .whatever_context("Failed to create download config")?;
 
-    let data_source = CikLookupDataSources::new(&download_config)
-        .whatever_context("Failed to create a data source")?;
-
-    let records = CikLookupRecords::new(&data_source).whatever_context("Failed to get records")?;
+    let records =
+        CikLookupRecords::new(&download_config).whatever_context("Failed to get records")?;
 
     let bar = ProgressBar::new(records.count() as u64);
     bar.set_style(
@@ -30,7 +24,8 @@ pub fn ingest_cik_lookup() -> Result<(), Whatever> {
             .progress_chars("##-"),
     );
 
-    let records = CikLookupRecords::new(&data_source).whatever_context("Failed to get records")?;
+    let records =
+        CikLookupRecords::new(&download_config).whatever_context("Failed to get records")?;
     let mut db = PostgresDB::new().whatever_context("Failed to get a db client")?;
 
     for r in records {

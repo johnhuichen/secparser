@@ -1,7 +1,4 @@
-use secparser_core::{
-    cik_lookup::{data_source::CikLookupDataSources, record::CikLookupRecords},
-    downloader::DownloadConfigBuilder,
-};
+use secparser_core::{cik_lookup::record::CikLookupRecords, downloader::DownloadConfigBuilder};
 use snafu::{ResultExt, Whatever};
 
 fn main() -> Result<(), Whatever> {
@@ -14,9 +11,8 @@ fn main() -> Result<(), Whatever> {
         .build()
         .whatever_context("Failed to build download config")?;
 
-    let data_source = CikLookupDataSources::new(&download_config)
-        .whatever_context("Failed to get data source")?;
-    let records = CikLookupRecords::new(&data_source).whatever_context("Failed to get records")?;
+    let records =
+        CikLookupRecords::new(&download_config).whatever_context("Failed to get records")?;
 
     for r in records {
         log::info!("{r:?}");

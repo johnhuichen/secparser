@@ -1,6 +1,5 @@
 use secparser_core::{
-    downloader::DownloadConfigBuilder,
-    financial_statements::{data_source::FsDataSources, tag_record::FsTagRecords},
+    downloader::DownloadConfigBuilder, financial_statements::sub_record::FsSubRecords,
     zip_csv_records::CsvConfigBuilder,
 };
 use snafu::{ResultExt, Whatever};
@@ -15,15 +14,13 @@ fn main() -> Result<(), Whatever> {
         .download_dir("./download".to_string())
         .build()
         .whatever_context("Failed to build download config")?;
-    let from_year = 2024;
-    let data_sources = FsDataSources::new(&download_config, from_year)
-        .whatever_context("Failed to get data source")?;
 
     let record_config = CsvConfigBuilder::default()
         .panic_on_error(true)
         .build()
         .whatever_context("Failed to build csv config")?;
-    let records = FsTagRecords::new(&data_sources, record_config)
+    let from_year = 2024;
+    let records = FsSubRecords::get(&download_config, record_config, from_year)
         .whatever_context("Failed to parse records")?;
     for record in records {
         log::info!("{:?}", record);

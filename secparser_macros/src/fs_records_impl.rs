@@ -33,12 +33,16 @@ pub fn records_impl_codegen(
     data_class: &proc_macro2::Ident,
     records_class: &proc_macro2::Ident,
 ) -> proc_macro2::TokenStream {
+    let data_error_name = format!("{}Error", data_class);
+    let data_error_class = syn::Ident::new(&data_error_name, data_class.span());
     quote! {
         use std::vec;
 
-        use crate::data_source::DataSource;
-        use crate::financial_statements::data_source::FsDataSources;
+        use crate::data_source::{DataSource, DataSourceError};
+        use crate::downloader::DownloadConfig;
         use crate::zip_csv_records::{CsvConfig, ZipCsvRecords, ZipCsvRecordsError};
+        use crate::financial_statements::data_source::FsDataSources;
+        use snafu::{ResultExt, Snafu};
 
         pub type DataSourceIter = vec::IntoIter<DataSource>;
 
@@ -48,8 +52,22 @@ pub fn records_impl_codegen(
             pub maybe_records: Option<ZipCsvRecords<#data_class>>,
         }
 
+        #[derive(Debug, Snafu)]
+        pub enum #data_error_class {
+            #[snafu(display("Failed to process csv"))]
+            ZipCsv { source: ZipCsvRecordsError },
+
+            #[snafu(display("Failed to get data source"))]
+            DataSource { source: DataSourceError }
+        }
+
         impl #records_class {
-            pub fn new(data_sources: &FsDataSources, config: CsvConfig) -> Result<Self, ZipCsvRecordsError> {
+            pub fn new(
+                download_config: &DownloadConfig,
+                config: CsvConfig,
+                from_year: i32) -> Result<Self, #data_error_class> {
+                let data_sources = FsDataSources::new(&download_config, from_year)
+                    .context(DataSourceSnafu)?;
                 let data_source_iter = data_sources.vec.clone().into_iter();
 
                 let mut result = Self {
@@ -58,7 +76,7 @@ pub fn records_impl_codegen(
                     maybe_records: None,
                 };
 
-                result.get_maybe_record_iter()?;
+                result.get_maybe_record_iter().context(ZipCsvSnafu)?;
 
                 Ok(result)
             }
@@ -116,6 +134,7 @@ pub fn tests_codegen(
             use crate::{
                 downloader::DownloadConfigBuilder,
                 zip_csv_records::CsvConfigBuilder,
+                financial_statements::data_source::FsDataSources
             };
             use snafu::{ResultExt, Whatever};
 
@@ -134,15 +153,12 @@ pub fn tests_codegen(
                     .download_dir("./download".to_string())
                     .build()
                     .whatever_context("Failed to build config")?;
-                let from_year = 2024;
-                let data_sources = FsDataSources::new(&download_config, from_year)
-                    .whatever_context("Failed to get data source")?;
-
                 let record_config = CsvConfigBuilder::default()
                     .panic_on_error(true)
                     .build()
                     .whatever_context("Failed to build csv config")?;
-                let records = #records_class::new(&data_sources, record_config)
+                let from_year = 2024;
+                let records = #records_class::new(&download_config, record_config, from_year)
                     .whatever_context("Failed to parse records")?;
                 for record in records {
                     log::info!("{:?}", record);

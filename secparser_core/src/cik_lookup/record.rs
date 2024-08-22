@@ -6,12 +6,17 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use snafu::{Location, ResultExt, Snafu};
 
+use crate::data_source::DataSourceError;
+use crate::downloader::DownloadConfig;
 use crate::traits::{FileLines, FileReader};
 
 use super::data_source::CikLookupDataSources;
 
 #[derive(Debug, Snafu)]
 pub enum CikLookupRecordsError {
+    #[snafu(display("Failed to get data source"))]
+    DataSource { source: DataSourceError },
+
     #[snafu(display("IO error at {loc}"))]
     #[snafu(context(false))]
     IO {
@@ -52,14 +57,15 @@ pub struct CikLookupRecords {
 impl FileReader for CikLookupRecords {}
 
 impl CikLookupRecords {
-    pub fn new(datasource: &CikLookupDataSources) -> Result<Self, CikLookupRecordsError> {
-        let lines = Self::get_lines(&datasource.lookup_ds.filepath)?;
+    pub fn new(download_config: &DownloadConfig) -> Result<Self, CikLookupRecordsError> {
+        let data_source = CikLookupDataSources::new(download_config).context(DataSourceSnafu)?;
+        let lines = Self::get_lines(&data_source.lookup_ds.filepath)?;
 
-        let file = File::open(&datasource.tickers_exchange_ds.filepath)?;
+        let file = File::open(&data_source.tickers_exchange_ds.filepath)?;
         let reader = BufReader::new(file);
         let tickers_exchange: TickersExchangeData =
             serde_json::from_reader(reader).context(DeserializeSnafu {
-                filepath: &datasource.tickers_exchange_ds.filepath,
+                filepath: &data_source.tickers_exchange_ds.filepath,
             })?;
 
         assert_eq!(
@@ -141,10 +147,8 @@ mod tests {
             .download_dir("./download".to_string())
             .build()
             .whatever_context("Failed to build config")?;
-        let data_source = CikLookupDataSources::new(&download_config)
-            .whatever_context("Failed to get data source")?;
         let records =
-            CikLookupRecords::new(&data_source).whatever_context("Failed to create records")?;
+            CikLookupRecords::new(&download_config).whatever_context("Failed to create records")?;
 
         for r in records {
             log::debug!("{r:?}");

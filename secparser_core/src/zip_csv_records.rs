@@ -38,7 +38,10 @@ pub struct CsvConfig {
     pub panic_on_error: bool,
 }
 
-pub struct ZipCsvRecords<T> {
+pub struct ZipCsvRecords<T>
+where
+    T: DeserializeOwned,
+{
     record_iter: std::vec::IntoIter<T>,
 }
 
@@ -61,11 +64,12 @@ where
             .flexible(config.csv_flexible)
             .delimiter(b'\t')
             .from_reader(reader);
+        let handle_error = |e| panic!("Should parse {:?}: {e}", data_source.filepath);
         let record_iter = reader
             .into_deserialize()
             .filter_map(|r| {
                 if config.panic_on_error {
-                    panic!("Should parse {:?}", data_source.filepath);
+                    Some(r.unwrap_or_else(handle_error))
                 } else {
                     r.ok()
                 }

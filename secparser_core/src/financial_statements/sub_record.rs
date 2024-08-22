@@ -1,9 +1,11 @@
-use secparser_macros::FsRecordsImpl;
 use serde::Deserialize;
 
-const TSV_FILENAME: &str = "sub.tsv";
+use crate::downloader::DownloadConfig;
+use crate::zip_csv_records::CsvConfig;
 
-#[derive(Debug, Deserialize, FsRecordsImpl)]
+use super::record::{FsRecords, FsRecordsError};
+
+#[derive(Debug, Deserialize)]
 pub struct FsSub {
     pub adsh: String,
     pub cik: usize,
@@ -49,4 +51,16 @@ pub struct FsSub {
     pub floatdate: String,
     pub floataxis: String,
     pub floatmems: Option<u8>,
+}
+
+pub struct FsSubRecords {}
+
+impl FsSubRecords {
+    pub fn get(
+        download_config: &DownloadConfig,
+        config: CsvConfig,
+        from_year: i32,
+    ) -> Result<FsRecords<FsSub>, FsRecordsError> {
+        FsRecords::new(download_config, config, from_year, "sub.tsv")
+    }
 }
