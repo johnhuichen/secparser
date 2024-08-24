@@ -17,7 +17,7 @@ pub enum FsRecordsError {
     DataSource { source: DataSourceError },
 }
 
-pub trait FsRecord {
+pub trait FsRecord: DeserializeOwned + Debug {
     fn csv_filename() -> String;
 }
 
@@ -25,7 +25,7 @@ pub type DataSourceIter = vec::IntoIter<DataSource>;
 
 pub struct FsRecords<T>
 where
-    T: DeserializeOwned + FsRecord,
+    T: FsRecord,
 {
     pub config: CsvConfig,
     pub data_source_iter: DataSourceIter,
@@ -35,7 +35,7 @@ where
 
 impl<T> FsRecords<T>
 where
-    T: DeserializeOwned + FsRecord,
+    T: FsRecord,
 {
     pub fn new(
         download_config: &DownloadConfig,
@@ -62,8 +62,8 @@ where
         match self.data_source_iter.next() {
             Some(data_source) => {
                 log::info!(
-                    "Processing {:?}/{}",
-                    data_source.filepath,
+                    "Processing {}/{}",
+                    data_source.filepath.display(),
                     self.csv_filename
                 );
                 let records: ZipCsvRecords<T> =
@@ -83,7 +83,7 @@ where
 
 impl<T> Iterator for FsRecords<T>
 where
-    T: DeserializeOwned + FsRecord,
+    T: FsRecord,
 {
     type Item = T;
 
@@ -105,7 +105,7 @@ where
 
 pub fn test_fs_records<T>() -> Result<(), Whatever>
 where
-    T: DeserializeOwned + Debug + FsRecord,
+    T: FsRecord,
 {
     env_logger::builder()
         // .is_test(true)

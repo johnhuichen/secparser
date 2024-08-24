@@ -93,6 +93,7 @@ impl CikLookupRecords {
             .parse::<usize>()
             .unwrap_or_else(|e| panic!("Should parse cik: {e}"));
         let (ticker, exchange) = self.tickers_exchange.get(&cik).unwrap_or(&(None, None));
+        let name = name.to_string();
         let ticker = match ticker {
             Some(v) => v.to_string(),
             None => "".to_string(),
@@ -104,7 +105,7 @@ impl CikLookupRecords {
 
         CikLookup {
             cik,
-            name: name.to_string(),
+            name,
             ticker,
             exchange,
         }
