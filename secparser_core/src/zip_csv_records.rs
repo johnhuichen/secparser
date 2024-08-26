@@ -1,10 +1,13 @@
-use csv::ReaderBuilder;
+use aliasable::boxed::AliasableBox;
+use csv::{DeserializeRecordsIntoIter, ReaderBuilder};
 use derive_builder::Builder;
 use serde::de::DeserializeOwned;
 use snafu::{Location, Snafu};
 use std::fs::File;
 use std::io;
 use std::io::BufReader;
+use std::iter::FilterMap;
+use zip::read::ZipFile;
 use zip::ZipArchive;
 
 use crate::data_source::DataSource;
@@ -38,11 +41,16 @@ pub struct CsvConfig {
     pub panic_on_error: bool,
 }
 
+type FilterMapRecord<T> = fn(record: Result<T, csv::Error>) -> Option<T>;
+type RecordIter<'archive, T> =
+    FilterMap<DeserializeRecordsIntoIter<BufReader<ZipFile<'archive>>, T>, FilterMapRecord<T>>;
+
 pub struct ZipCsvRecords<T>
 where
     T: DeserializeOwned,
 {
-    record_iter: std::vec::IntoIter<T>,
+    record_iter: RecordIter<'static, T>,
+    _archive: AliasableBox<ZipArchive<File>>,
 }
 
 impl<T> ZipCsvRecords<T>
@@ -55,7 +63,8 @@ where
         csv_file: &str,
     ) -> Result<Self, ZipCsvRecordsError> {
         let zip_file = File::open(&data_source.filepath)?;
-        let mut archive = ZipArchive::new(zip_file)?;
+        let archive = ZipArchive::new(zip_file)?;
+        let mut archive = AliasableBox::from_unique(Box::new(archive));
 
         let file = archive.by_name(csv_file)?;
         let reader = BufReader::new(file);
@@ -64,20 +73,23 @@ where
             .flexible(config.csv_flexible)
             .delimiter(b'\t')
             .from_reader(reader);
-        let handle_error = |e| panic!("Should parse {:?}: {e}", data_source.filepath);
-        let record_iter = reader
-            .into_deserialize()
-            .filter_map(|r| {
-                if config.panic_on_error {
-                    Some(r.unwrap_or_else(handle_error))
-                } else {
-                    r.ok()
-                }
-            })
-            .collect::<Vec<T>>()
-            .into_iter();
 
-        Ok(Self { record_iter })
+        fn panic_on_error<T>(maybe_record: Result<T, csv::Error>) -> Option<T> {
+            Some(maybe_record.unwrap_or_else(|e| panic!("Should parse {e}")))
+        }
+        fn ignore_error<T>(maybe_record: Result<T, csv::Error>) -> Option<T> {
+            maybe_record.ok()
+        }
+        let record_iter: RecordIter<T> = match config.panic_on_error {
+            true => reader.into_deserialize().filter_map(panic_on_error),
+            false => reader.into_deserialize().filter_map(ignore_error),
+        };
+        let record_iter: RecordIter<T> = unsafe { std::mem::transmute(record_iter) };
+
+        Ok(Self {
+            record_iter,
+            _archive: archive,
+        })
     }
 }
 
