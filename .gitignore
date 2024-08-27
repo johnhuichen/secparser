@@ -6,3 +6,6 @@ target/
 
 # download folder
 download
+
+# csv
+*.csv

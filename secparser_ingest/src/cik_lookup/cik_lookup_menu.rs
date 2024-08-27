@@ -1,10 +1,11 @@
 use colored::Colorize;
 use inquire::Select;
-use secparser_core::cik_lookup::record::CikLookupRecords;
-use secparser_core::downloader::DownloadConfigBuilder;
+use secparser_core::{cik_lookup::record::CikLookupRecords, downloader::DownloadConfigBuilder};
 use snafu::{ResultExt, Whatever};
 
-use crate::cik_lookup::cik_lookup_ingest::ingest_cik_lookup;
+use crate::ingestible::ingest;
+
+use super::cik_lookup_ingestible::CikLookupTable;
 
 pub fn open() -> Result<(), Whatever> {
     let user_agent = "example@secparser.com".to_string();
@@ -23,7 +24,7 @@ pub fn open() -> Result<(), Whatever> {
         let options: Vec<&str> = vec![view_next_opt, ingest_opt, back_opt];
         let ans = Select::new("Choose one of the options", options)
             .prompt()
-            .whatever_context("Failed to get answer")?;
+            .unwrap_or_default();
 
         if ans == back_opt {
             break;
@@ -49,12 +50,11 @@ pub fn open() -> Result<(), Whatever> {
         }
 
         if ans == ingest_opt {
-            ingest_cik_lookup().whatever_context("Failed to ingest CIK lookup")?;
+            ingest::<CikLookupRecords, CikLookupTable>()
+                .whatever_context("Failed to ingest CIK lookup")?;
 
             continue;
         }
-
-        unreachable!("Should not be here");
     }
 
     Ok(())

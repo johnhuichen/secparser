@@ -16,3 +16,5 @@ serde_json = { workspace = true }
 
 secparser_core = { workspace = true }
 colored.workspace = true
+csv = "1.3.0"
+itertools = "0.13.0"
