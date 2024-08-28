@@ -5,6 +5,7 @@ use secparser_core::downloader::DownloadConfigBuilder;
 use secparser_core::financial_statements::num_record::FsNum;
 use secparser_core::financial_statements::record::{FsRecord, FsRecords};
 use secparser_core::financial_statements::sub_record::FsSub;
+use secparser_core::financial_statements::tag_record::FsTag;
 use secparser_core::zip_csv_records::CsvConfigBuilder;
 use snafu::ResultExt;
 
@@ -34,6 +35,14 @@ where
             .whatever_context("Failed to parse records")?;
 
         Ok(records)
+    }
+}
+
+pub struct FsSubTable {}
+
+impl IngestibleRecordTable for FsSubTable {
+    fn table_name() -> String {
+        String::from("fs_sub")
     }
 }
 
@@ -93,14 +102,6 @@ impl IngestibleRecord for FsNum {
     }
 }
 
-pub struct FsSubTable {}
-
-impl IngestibleRecordTable for FsSubTable {
-    fn table_name() -> String {
-        String::from("fs_sub")
-    }
-}
-
 pub struct FsNumTable {}
 
 impl IngestibleRecordTable for FsNumTable {
@@ -114,5 +115,45 @@ WHERE NOT EXISTS (
     WHERE s.adsh = t.adsh AND s.period = t.ddate
 );";
         String::from(post_query)
+    }
+}
+
+pub struct FsTagTable {}
+
+impl IngestibleRecordTable for FsTagTable {
+    fn table_name() -> String {
+        String::from("fs_tag")
+    }
+    fn post_query() -> String {
+        let post_query = "DELETE FROM tmp_table AS t
+WHERE NOT EXISTS (
+    SELECT * FROM fs_num AS n
+    WHERE n.tag = t.tag AND n.version = t.version
+);";
+        String::from(post_query)
+    }
+}
+
+impl IngestibleRecord for FsTag {
+    fn display_name(&self) -> String {
+        format!("{}/{}", self.tag, self.version)
+    }
+
+    fn write_to_csv(&self, writer: &mut Writer<File>) -> Result<(), csv::Error> {
+        if self.r#abstract.unwrap_or_default() == 1 {
+            return Ok(());
+        }
+
+        writer.write_record(&[
+            self.tag.to_string(),
+            self.version.to_string(),
+            self.r#abstract.unwrap_or_default().to_string(),
+            self.datatype.to_string(),
+            self.iord.to_string(),
+            self.crdr.to_string(),
+            self.tlabel.to_string(),
+        ])?;
+
+        Ok(())
     }
 }

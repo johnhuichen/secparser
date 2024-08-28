@@ -3,9 +3,10 @@ use inquire::Select;
 use secparser_core::financial_statements::num_record::FsNum;
 use secparser_core::financial_statements::record::FsRecords;
 use secparser_core::financial_statements::sub_record::FsSub;
+use secparser_core::financial_statements::tag_record::FsTag;
 use snafu::{ResultExt, Whatever};
 
-use crate::fs_10k::fs_10k_ingestible::{FsNumTable, FsSubTable};
+use crate::fs_10k::fs_10k_ingestible::{FsNumTable, FsSubTable, FsTagTable};
 use crate::ingestible::{ingest, IngestableRecordIter};
 
 pub fn open() -> Result<(), Whatever> {
@@ -61,6 +62,10 @@ pub fn open() -> Result<(), Whatever> {
 
             println!("Ingesting numeric data");
             ingest::<FsRecords<FsNum>, FsNumTable>()
+                .whatever_context("Failed to ingest numeric data")?;
+
+            println!("Ingesting tag data");
+            ingest::<FsRecords<FsTag>, FsTagTable>()
                 .whatever_context("Failed to ingest numeric data")?;
 
             continue;
