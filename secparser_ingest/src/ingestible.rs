@@ -2,7 +2,7 @@ use std::fs::{self, File};
 
 use csv::Writer;
 use itertools::Itertools;
-use snafu::{ResultExt, Whatever};
+use snafu::{whatever, ResultExt, Whatever};
 
 use crate::db::PostgresDB;
 use crate::progress_bar::CustomProgressBar;
@@ -37,6 +37,22 @@ where
     let post_query = T::post_query();
 
     let mut db = PostgresDB::new().whatever_context("Failed to get a db client")?;
+    let query = "
+    SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE  table_schema = 'public'
+    AND    table_name   = $1
+    );
+    ";
+    let row = db
+        .client
+        .query_one(query, &[&table_name])
+        .whatever_context("Failed to check information schema")?;
+
+    if !row.get::<&str, bool>("exists") {
+        create_table(&mut db, &table_name)?;
+    }
+
     let records = I::get()?;
     let csv_path = format!("{}{}.csv", csv_dir, table_name);
 
@@ -87,4 +103,131 @@ COMMIT;
         csv_path, table_name, post_query
     );
     db.client.batch_execute(&query)
+}
+
+fn create_table(db: &mut PostgresDB, table_name: &str) -> Result<(), Whatever> {
+    let query = if table_name == "cik_lookup" {
+        "
+        CREATE TABLE cik_lookup
+        (
+          cik OID NOT NULL,
+          name TEXT,
+          ticker TEXT,
+          exchange TEXT,
+
+          PRIMARY KEY (cik)
+        );
+        "
+    } else if table_name == "fs_sub" {
+        "
+        CREATE TABLE fs_sub
+        (
+          adsh TEXT NOT NULL,
+          cik OID,
+          -- name TEXT,
+          -- sic TEXT,
+
+          /*
+           *countryba TEXT,
+           *stprba TEXT,
+           *cityba TEXT,
+           *zipba TEXT,
+           *bas1 TEXT,
+           *bas2 TEXT,
+           *baph TEXT,
+           *
+           *
+           * countryma TEXT,
+           * stprma TEXT,
+           * cityma TEXT,
+           * zipma TEXT,
+           * mas1 TEXT,
+           * mas2 TEXT,
+           *
+           * countryinc TEXT,
+           * stprinc TEXT,
+           */
+
+          ein TEXT,
+
+          -- former TEXT, changed TEXT,
+
+          afs TEXT,
+
+          -- wksi SMALLINT,
+
+          fye TEXT,
+          form TEXT,
+          period TEXT,
+          fy TEXT,
+          fp TEXT,
+          filed TEXT,
+
+          -- accepted TEXT,
+          -- prevrpt SMALLINT NOT NULL,
+          -- detail SMALLINT NOT NULL,
+          instance TEXT,
+          -- nciks SMALLINT NOT NULL,
+          -- aciks TEXT,
+          -- pubfloatusd REAL,
+          -- floatdate TEXT,
+          -- floataxis TEXT,
+          -- floatmems SMALLINT,
+
+          PRIMARY KEY (adsh)
+        );
+        "
+    } else if table_name == "fs_num" {
+        "
+        CREATE TABLE fs_num
+        (
+          adsh TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          version TEXT NOT NULL,
+          ddate TEXT NOT NULL,
+          qtrs SMALLINT NOT NULL,
+          uom TEXT NOT NULL,
+          -- dimh TEXT NOT NULL,
+          -- iprx SMALLINT NOT NULL,
+          value REAL,
+          -- footnote TEXT,
+          -- footlen BIGINT,
+          -- dimn SMALLINT,
+          -- coreg TEXT,
+          -- durp REAL,
+          -- datp REAL,
+          -- dcml REAL,
+
+          PRIMARY KEY (adsh, tag, version, ddate, qtrs, uom)
+        );
+        "
+    } else if table_name == "fs_tag" {
+        "
+        CREATE TABLE fs_tag
+        (
+          tag TEXT NOT NULL,
+          version TEXT NOT NULL,
+
+          -- custom SMALLINT NOT NULL,
+
+          abstract SMALLINT NOT NULL,
+          datatype TEXT,
+          iord TEXT,
+          crdr TEXT,
+          tlabel TEXT,
+
+          -- doc TEXT,
+
+          PRIMARY KEY (tag, version)
+        );
+        "
+    } else {
+        whatever!("Should create one of the tables: cik_lookup, fs_sub, fs_num, fs_tag");
+    };
+
+    db.client
+        .batch_execute(query)
+        .whatever_context(format!("Failed to create table {table_name}"))?;
+
+    Ok(())
 }

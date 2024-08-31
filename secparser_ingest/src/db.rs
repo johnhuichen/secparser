@@ -16,10 +16,10 @@ pub struct PostgresDB {
     pub client: Client,
 }
 
-const SECSOURCR_DB_USER: &str = "SECSOURCR_DB_USER";
-const SECSOURCR_DB_PASSWORD: &str = "SECSOURCR_DB_PASSWORD";
-const SECSOURCR_DB_HOST: &str = "SECSOURCR_DB_HOST";
-const SECSOURCR_DB_DATABASE: &str = "SECSOURCR_DB_DATABASE";
+const SECPARSER_DB_USER: &str = "SECPARSER_DB_USER";
+const SECPARSER_DB_PASSWORD: &str = "SECPARSER_DB_PASSWORD";
+const SECPARSER_DB_HOST: &str = "SECPARSER_DB_HOST";
+const SECPARSER_DB_DATABASE: &str = "SECPARSER_DB_DATABASE";
 
 impl PostgresDB {
     pub fn new() -> Result<Self, ConstructorError> {
@@ -30,10 +30,10 @@ impl PostgresDB {
     }
 
     fn get_db_params() -> Result<String, env::VarError> {
-        let db_user = env::var(SECSOURCR_DB_USER)?;
-        let db_password = env::var(SECSOURCR_DB_PASSWORD)?;
-        let db_host = env::var(SECSOURCR_DB_HOST)?;
-        let db_database = env::var(SECSOURCR_DB_DATABASE)?;
+        let db_user = env::var(SECPARSER_DB_USER)?;
+        let db_password = env::var(SECPARSER_DB_PASSWORD)?;
+        let db_host = env::var(SECPARSER_DB_HOST)?;
+        let db_database = env::var(SECPARSER_DB_DATABASE)?;
 
         Ok(format!(
             "postgresql://{}:{}@{}/{}",
