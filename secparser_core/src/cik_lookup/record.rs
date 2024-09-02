@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use snafu::{Location, ResultExt, Snafu};
 
 use crate::data_source::DataSourceError;
@@ -32,7 +32,7 @@ pub enum CikLookupRecordsError {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct CikLookup {
     pub cik: usize,
     pub name: String,

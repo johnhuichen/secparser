@@ -1,4 +1,5 @@
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use snafu::{ResultExt, Snafu, Whatever};
 use std::fmt::Debug;
 use std::vec;
@@ -17,7 +18,7 @@ pub enum FsRecordsError {
     DataSource { source: DataSourceError },
 }
 
-pub trait FsRecord: DeserializeOwned + Debug {
+pub trait FsRecord: Serialize + DeserializeOwned + Debug {
     fn csv_filename() -> String;
 }
 

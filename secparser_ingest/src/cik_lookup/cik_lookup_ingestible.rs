@@ -1,6 +1,3 @@
-use std::fs;
-
-use csv::Writer;
 use secparser_core::{
     cik_lookup::record::{CikLookup, CikLookupRecords},
     downloader::DownloadConfigBuilder,
@@ -12,15 +9,6 @@ use crate::ingestible::{IngestableRecordIter, IngestibleRecord, IngestibleRecord
 impl IngestibleRecord for CikLookup {
     fn display_name(&self) -> String {
         self.name.to_string()
-    }
-
-    fn write_to_csv(&self, writer: &mut Writer<fs::File>) -> Result<(), csv::Error> {
-        writer.write_record(&[
-            self.cik.to_string(),
-            self.name.to_string(),
-            self.ticker.to_string(),
-            self.exchange.to_string(),
-        ])
     }
 }
 

@@ -12,7 +12,7 @@ pub enum ConstructorError {
     Postgres { source: postgres::Error },
 }
 
-pub struct PostgresDB {
+pub struct PostgresDb {
     pub client: Client,
 }
 
@@ -21,12 +21,12 @@ const SECPARSER_DB_PASSWORD: &str = "SECPARSER_DB_PASSWORD";
 const SECPARSER_DB_HOST: &str = "SECPARSER_DB_HOST";
 const SECPARSER_DB_DATABASE: &str = "SECPARSER_DB_DATABASE";
 
-impl PostgresDB {
+impl PostgresDb {
     pub fn new() -> Result<Self, ConstructorError> {
         let db_params = Self::get_db_params().context(EnvVarSnafu)?;
         let client = Client::connect(&db_params, NoTls).context(PostgresSnafu)?;
 
-        Ok(PostgresDB { client })
+        Ok(PostgresDb { client })
     }
 
     fn get_db_params() -> Result<String, env::VarError> {
