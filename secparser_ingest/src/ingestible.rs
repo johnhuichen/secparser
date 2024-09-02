@@ -1,10 +1,11 @@
-use std::fs::{self, File};
+use std::fs::{self};
 
 use csv::Writer;
 use itertools::Itertools;
+use serde::Serialize;
 use snafu::{whatever, ResultExt, Whatever};
 
-use crate::db::PostgresDB;
+use crate::db::PostgresDb;
 use crate::progress_bar::CustomProgressBar;
 
 pub trait IngestibleRecordTable {
@@ -14,9 +15,8 @@ pub trait IngestibleRecordTable {
     }
 }
 
-pub trait IngestibleRecord {
+pub trait IngestibleRecord: Serialize {
     fn display_name(&self) -> String;
-    fn write_to_csv(&self, writer: &mut Writer<File>) -> Result<(), csv::Error>;
 }
 
 pub trait IngestableRecordIter {
@@ -36,7 +36,7 @@ where
     let table_name = T::table_name();
     let post_query = T::post_query();
 
-    let mut db = PostgresDB::new().whatever_context("Failed to get a db client")?;
+    let mut db = PostgresDb::new().whatever_context("Failed to get a db client")?;
     let query = "
     SELECT EXISTS (
     SELECT FROM information_schema.tables 
@@ -62,8 +62,8 @@ where
             Writer::from_path(&csv_path).whatever_context("Failed to get csv writer")?;
         for record in chunk {
             bar.inc_with_msg(1, &record.display_name());
-            record
-                .write_to_csv(&mut writer)
+            writer
+                .serialize(record)
                 .whatever_context("Failed to write to csv")?;
         }
 
@@ -79,7 +79,7 @@ where
 }
 
 pub fn copy_from_csv(
-    db: &mut PostgresDB,
+    db: &mut PostgresDb,
     csv_path: &str,
     table_name: &str,
     post_query: &str,
@@ -105,7 +105,7 @@ COMMIT;
     db.client.batch_execute(&query)
 }
 
-fn create_table(db: &mut PostgresDB, table_name: &str) -> Result<(), Whatever> {
+fn create_table(db: &mut PostgresDb, table_name: &str) -> Result<(), Whatever> {
     let query = if table_name == "cik_lookup" {
         "
         CREATE TABLE cik_lookup
